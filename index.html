@@ -50,16 +50,12 @@ const CATEGORIES = {
   sepsis:         { name: "Sepsis and Multiple Organ Dysfunction Syndrome",   hours: "6.0",   color: "#8b5cf6" },
   none:           { name: "No clear WICC match",                              hours: "-",     color: "#6b7280" }
 };
-
 const COURSES = [
-  // Scan Artist Files
   { name: "Scan Artist: Images From Sound (S1E1)", studio: "Scan Artist Files", wicc: ["diagnostics"] },
   { name: "Scan Artist: The Probe (S1E2)", studio: "Scan Artist Files", wicc: ["diagnostics"] },
   { name: "Scan Artist: Lung Sliding & Pneumothorax (S1E3)", studio: "Scan Artist Files", wicc: ["diagnostics", "respiratory"] },
   { name: "Scan Artist: Is This Tachycardia Compensatory (S1E4)", studio: "Scan Artist Files", wicc: ["diagnostics", "cardiovascular"] },
   { name: "Scan Artist: Ultrasound & The FAST Exam (S1E5)", studio: "Scan Artist Files", wicc: ["diagnostics"] },
-
-  // Airway/Respiratory/Ventilation
   { name: "Understanding COPD", studio: "Airway/Resp/Vent", wicc: ["respiratory"] },
   { name: "The Advanced Airway Course", studio: "Airway/Resp/Vent", wicc: ["respiratory"] },
   { name: "The Airway Assistant Course", studio: "Airway/Resp/Vent", wicc: ["respiratory"] },
@@ -72,22 +68,16 @@ const COURSES = [
   { name: "The FOAMfrat Respiratory Pharmacopeia", studio: "Airway/Resp/Vent", wicc: ["pharmacology"] },
   { name: "Treading Water: Respiratory Distress vs. Failure", studio: "Airway/Resp/Vent", wicc: ["respiratory"] },
   { name: "Airway Podcasts", studio: "Airway/Resp/Vent", wicc: ["respiratory"] },
-
-  // Cardiovascular
   { name: "Cardiac Monitoring Waveforms", studio: "Cardiovascular", wicc: ["diagnostics", "cardiovascular"] },
   { name: "Understanding CPR", studio: "Cardiovascular", wicc: ["cpr"] },
   { name: "Is This Tachycardia Compensatory?", studio: "Cardiovascular", wicc: ["cardiovascular"] },
   { name: "ECG Basics", studio: "Cardiovascular", wicc: ["diagnostics", "cardiovascular"] },
   { name: "Cardiac Anatomy", studio: "Cardiovascular", wicc: ["cardiovascular"] },
-
-  // Trauma
   { name: "Blood Transfusion and Resuscitation", studio: "Trauma", wicc: ["vascular"] },
   { name: "Ultrasound & The FAST Exam", studio: "Trauma", wicc: ["diagnostics"] },
   { name: "Gut Instinct: Abdominal Trauma", studio: "Trauma", wicc: ["none"] },
   { name: "FOAMfrat Bloodlines", studio: "Trauma", wicc: ["vascular"] },
   { name: "Cage Match: Thoracic Trauma", studio: "Trauma", wicc: ["none"] },
-
-  // Medical
   { name: "Animated Guide to Disseminated Intravascular Coagulation", studio: "Medical", wicc: ["sepsis", "diagnostics"] },
   { name: "The Resus Room", studio: "Medical", wicc: ["diagnostics"] },
   { name: "Abdominal Anatomy", studio: "Medical", wicc: ["none"] },
@@ -124,22 +114,16 @@ const COURSES = [
   { name: "VIA: Medication Routes", studio: "Medical", wicc: ["vascular"] },
   { name: "Does Medicine Have Dangerous Side Effects for Women?", studio: "Medical", wicc: ["pharmacology"] },
   { name: "Training for Humeral Head IO", studio: "Medical", wicc: ["vascular"] },
-
-  // Pediatrics
   { name: "Pediatric Trauma: Accidental and Non-Accidental", studio: "Pediatrics", wicc: ["none"] },
   { name: "Training for Pediatric Intubation", studio: "Pediatrics", wicc: ["none"] },
   { name: "Pediatric TBI Protocol", studio: "Pediatrics", wicc: ["none"] },
   { name: "Training for Needle Cricothyrotomy", studio: "Pediatrics", wicc: ["none"] },
   { name: "Neonatal Surgical Emergencies", studio: "Pediatrics", wicc: ["none"] },
-
-  // Operations
   { name: "Vital Signs: Sexual Assault Awareness", studio: "Operations", wicc: ["none"] },
   { name: "Controlled RX Diversion", studio: "Operations", wicc: ["none"] },
   { name: "Performance Under Pressure", studio: "Operations", wicc: ["none"] },
   { name: "Flight Ops: Scene, Mass Casualty & Disaster Response", studio: "Operations", wicc: ["none"] },
   { name: "Ketamine Assisted Psychotherapy", studio: "Operations", wicc: ["pharmacology"] },
-
-  // Critical Care
   { name: "Out of Body: Introduction to ECMO", studio: "Critical Care", wicc: ["cardiovascular"] },
   { name: "Breath Delivery", studio: "Critical Care", wicc: ["respiratory"] },
   { name: "Post-Intubation Sedation and Analgesia", studio: "Critical Care", wicc: ["pharmacology"] },
@@ -169,67 +153,54 @@ const COURSES = [
   { name: "FEARLESS: Pediatric Mechanical Ventilation", studio: "Critical Care", wicc: ["respiratory"] },
   { name: "Infusion Crimes", studio: "Critical Care", wicc: ["vascular", "pharmacology"] }
 ];
-
-// Deduplicate
 const seen = new Set();
 const UNIQUE = COURSES.filter(c => { if (seen.has(c.name)) return false; seen.add(c.name); return true; });
-
 let filterCat = "all";
-
 function shortName(key) {
   return CATEGORIES[key].name.split(":")[0].split(",")[0];
 }
-
 function buildPills() {
   const el = document.getElementById("pills");
   const counts = {};
   Object.keys(CATEGORIES).forEach(k => counts[k] = 0);
   UNIQUE.forEach(c => c.wicc.forEach(w => counts[w]++));
-
-  let html = `<button class="pill" onclick="setFilter('all')" id="pill-all" style="background:${filterCat==='all'?'#f8fafc':'#334155'};color:${filterCat==='all'?'#0f172a':'#94a3b8'}">All (${UNIQUE.length})</button>`;
+  let html = '<button class="pill" onclick="setFilter(\'all\')" id="pill-all" style="background:' + (filterCat==='all'?'#f8fafc':'#334155') + ';color:' + (filterCat==='all'?'#0f172a':'#94a3b8') + '">All (' + UNIQUE.length + ')</button>';
   Object.entries(CATEGORIES).forEach(([key, cat]) => {
     if (key === "none") return;
     const active = filterCat === key;
-    html += `<button class="pill" onclick="setFilter('${key}')" id="pill-${key}" style="background:${active?cat.color:'#334155'};color:${active?'#fff':'#94a3b8'}">${shortName(key)} (${counts[key]})</button>`;
+    html += '<button class="pill" onclick="setFilter(\'' + key + '\')" id="pill-' + key + '" style="background:' + (active?cat.color:'#334155') + ';color:' + (active?'#fff':'#94a3b8') + '">' + shortName(key) + ' (' + counts[key] + ')</button>';
   });
   const noneActive = filterCat === "none";
-  html += `<button class="pill" onclick="setFilter('none')" id="pill-none" style="background:${noneActive?'#6b7280':'#334155'};color:${noneActive?'#fff':'#94a3b8'}">No match (${counts.none})</button>`;
+  html += '<button class="pill" onclick="setFilter(\'none\')" id="pill-none" style="background:' + (noneActive?'#6b7280':'#334155') + ';color:' + (noneActive?'#fff':'#94a3b8') + '">No match (' + counts.none + ')</button>';
   el.innerHTML = html;
 }
-
 function setFilter(cat) {
   filterCat = (filterCat === cat) ? "all" : cat;
   render();
 }
-
 function render() {
   const q = document.getElementById("search").value.toLowerCase().trim();
   let filtered = UNIQUE;
   if (q) filtered = filtered.filter(c => c.name.toLowerCase().includes(q) || c.studio.toLowerCase().includes(q));
   if (filterCat !== "all") filtered = filtered.filter(c => c.wicc.includes(filterCat));
   filtered.sort((a, b) => a.name.localeCompare(b.name));
-
   buildPills();
-  document.getElementById("count").textContent = `${filtered.length} course${filtered.length !== 1 ? 's' : ''} found`;
-
+  document.getElementById("count").textContent = filtered.length + ' course' + (filtered.length !== 1 ? 's' : '') + ' found';
   const el = document.getElementById("results");
   if (filtered.length === 0) {
-    el.innerHTML = `<div class="empty"><div class="empty-icon">\u{1F50D}</div><div style="font-size:15px">No courses match your search</div><div style="font-size:13px;margin-top:4px">Try a different keyword</div></div>`;
+    el.innerHTML = '<div class="empty"><div class="empty-icon">\u{1F50D}</div><div style="font-size:15px">No courses match your search</div><div style="font-size:13px;margin-top:4px">Try a different keyword</div></div>';
     return;
   }
-
   el.innerHTML = filtered.map(c => {
     const borderColor = CATEGORIES[c.wicc[0]].color;
     const tags = c.wicc.map(w => {
       const cat = CATEGORIES[w];
-      return `<span class="tag" style="background:${cat.color}22;color:${cat.color};border:1px solid ${cat.color}44">${shortName(w)}${w !== 'none' ? ' (' + cat.hours + ' hrs)' : ''}</span>`;
+      return '<span class="tag" style="background:' + cat.color + '22;color:' + cat.color + ';border:1px solid ' + cat.color + '44">' + shortName(w) + (w !== 'none' ? ' (' + cat.hours + ' hrs)' : '') + '</span>';
     }).join("");
-    return `<div class="card" style="border-left-color:${borderColor}"><div class="card-title">${esc(c.name)}</div><div class="card-studio">Studio: ${esc(c.studio)}</div><div class="tags">${tags}</div></div>`;
+    return '<div class="card" style="border-left-color:' + borderColor + '"><div class="card-title">' + esc(c.name) + '</div><div class="card-studio">Studio: ' + esc(c.studio) + '</div><div class="tags">' + tags + '</div></div>';
   }).join("");
 }
-
 function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
-
 render();
 </script>
 </body>
