@@ -3,6 +3,310 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WICC Course Matcher â FOAMfrat Studio</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { min-height: 100vh; background: #0f172a; color: #e2e8f0; font-family: system-ui, -apple-system, sans-serif; }
+  .container { max-width: 800px; margin: 0 auto; padding: 24px 16px; }
+  h1 { font-size: 24px; font-weight: 700; color: #f8fafc; text-align: center; }
+  .subtitle { font-size: 14px; color: #94a3b8; text-align: center; margin-top: 4px; }
+  .search { width: 100%; padding: 12px 16px; font-size: 16px; border-radius: 10px; border: 2px solid #334155; background: #1e293b; color: #f8fafc; outline: none; margin-bottom: 16px; }
+  .search:focus { border-color: #6366f1; }
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
+  .pill { padding: 6px 12px; border-radius: 20px; border: none; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+  .pill:hover { opacity: 0.85; }
+  .count { font-size: 13px; color: #64748b; margin-bottom: 12px; }
+  .results { display: flex; flex-direction: column; gap: 8px; }
+  .card { background: #1e293b; border-radius: 10px; padding: 14px 16px; border-left: 4px solid #6b7280; }
+  .card-header { display: flex; justify-content: space-between; align-items: flex-start; }
+  .card-title { font-size: 15px; font-weight: 600; color: #f1f5f9; }
+  .card-hours { font-size: 13px; font-weight: 700; color: #38bdf8; white-space: nowrap; margin-left: 12px; background: #0c4a6e; padding: 2px 8px; border-radius: 6px; }
+  .card-studio { font-size: 12px; color: #64748b; margin-top: 2px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .tag { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .empty { text-align: center; padding: 40px; color: #475569; }
+  .empty-icon { font-size: 32px; margin-bottom: 8px; }
+  .footer { text-align: center; margin-top: 32px; padding: 16px 0; border-top: 1px solid #1e293b; font-size: 11px; color: #475569; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div style="text-align:center;margin-bottom:24px">
+    <h1>WICC Course Matcher</h1>
+    <p class="subtitle">Search FOAMfrat Studio courses to find their WICC renewal category</p>
+  </div>
+  <input class="search" type="text" id="search" placeholder="Type a course name... (e.g. vasopressors, ECMO, lab)" oninput="render()">
+  <div class="pills" id="pills"></div>
+  <p class="count" id="count"></p>
+  <div class="results" id="results"></div>
+  <div class="footer">WICC F-01955 | 2026â2029 Renewal | 24 total hours required<br>Always verify CE hours against your actual course completion certificates</div>
+</div>
+<script>
+const CATEGORIES = {
+  cpr:            { name: "CPR",                                              color: "#ef4444" },
+  diagnostics:    { name: "Diagnostic Studies: Lab Interpretation, Radiology", color: "#f59e0b" },
+  vascular:       { name: "Vascular Access, Fluid and Blood Administration",  color: "#10b981" },
+  pharmacology:   { name: "Pharmacology",                                     color: "#6366f1" },
+  cardiovascular: { name: "Cardiovascular System",                            color: "#ec4899" },
+  respiratory:    { name: "Respiratory System",                               color: "#0ea5e9" },
+  sepsis:         { name: "Sepsis and Multiple Organ Dysfunction Syndrome",   color: "#8b5cf6" },
+  none:           { name: "No clear WICC match",                              color: "#6b7280" }
+};
+const COURSES = [
+  { name: "7-Sigma Procedure Lab", studio: "FOAMfrat 7Sigma Procedure Lab", hours: 1, wicc: ["none"] },
+  { name: "Abdmominal Anatomy", studio: "Abdmominal Anatomy", hours: 0.5, wicc: ["none"] },
+  { name: "Abdominal Trauma", studio: "Gut Instinct - Abdominal Trauma", hours: 1, wicc: ["none"] },
+  { name: "Acid-Base & Oxygenation", studio: "Acid-Base", hours: 1.5, wicc: ["respiratory"] },
+  { name: "Acute Coronary Syndrome", studio: "Acute Coronary Syndrome", hours: 1.5, wicc: ["cardiovascular"] },
+  { name: "Administrative Betrayal", studio: "Administrative Betrayal", hours: 0.5, wicc: ["none"] },
+  { name: "Adrenal Crisis Vodcast", studio: "Adrenal Crisis", hours: 0.5, wicc: ["sepsis"] },
+  { name: "Advanced Acid-Base - Metabolic Acidosis & Ventilation", studio: "Advanced Acid-Base - Metabolic Acidosis & Ventilation", hours: 1, wicc: ["respiratory"] },
+  { name: "Airway Podcasts", studio: "Airway Podcasts", hours: 1, wicc: ["respiratory"] },
+  { name: "Airway Techniques", studio: "Axis = Access", hours: 2, wicc: ["respiratory"] },
+  { name: "Ambulance Accident Case Study", studio: "I Rolled My Ambulance", hours: 1, wicc: ["none"] },
+  { name: "Ambulance Safety", studio: "Ambulance Operations", hours: 0.5, wicc: ["none"] },
+  { name: "Animated Guide to Disseminated Intravascular Coagulation", studio: "Animated Guide to Disseminated Intravascular Coagulation", hours: 1, wicc: ["sepsis", "diagnostics"] },
+  { name: "Animation Guide To ARDS", studio: "Animation Guide To ARDS", hours: 1, wicc: ["respiratory"] },
+  { name: "Applied Acid Base", studio: "CO2 Elimination", hours: 1, wicc: ["respiratory"] },
+  { name: "Approaching Algorithms", studio: "Stressed Circuits - Tachycardia and Bradycardia", hours: 2, wicc: ["cardiovascular"] },
+  { name: "Arterial Line Placement", studio: "Arterial Line Placement", hours: 1, wicc: ["vascular"] },
+  { name: "Arterial Lines", studio: "Anatomy of The Arterial Line", hours: 1, wicc: ["vascular", "diagnostics"] },
+  { name: "Arterial Waveforms", studio: "Arterial Waveforms", hours: 0.5, wicc: ["diagnostics"] },
+  { name: "At-Risk Populations", studio: "At-Risk Populations", hours: 1, wicc: ["none"] },
+  { name: "Bariatric & Geriatric Population", studio: "Special Considerations (Bariatric & Geriatric)", hours: 1, wicc: ["none"] },
+  { name: "Bedside Guide To Vasopressors", studio: "Bedside Guide To Vasopressors", hours: 0.5, wicc: ["pharmacology"] },
+  { name: "Blood Components & Administration", studio: "Blood Logistics", hours: 1, wicc: ["vascular"] },
+  { name: "Blood Transfusion and Resuscitation", studio: "Blood Transfusion and Resuscitation", hours: 1, wicc: ["vascular"] },
+  { name: "Bloodlines: Whole Blood Implementation", studio: "Bloodlines: Whole Blood Implementation", hours: 0.5, wicc: ["vascular"] },
+  { name: "Bougie Techniques Podcast", studio: "Bougie Technique", hours: 0.5, wicc: ["none"] },
+  { name: "Burns", studio: "Burns", hours: 1, wicc: ["none"] },
+  { name: "Capnography", studio: "Capnography", hours: 1, wicc: ["diagnostics", "respiratory"] },
+  { name: "Cardiac Arrest", studio: "Cardiac Arrest", hours: 2, wicc: ["cpr", "cardiovascular"] },
+  { name: "Cardiac Arrest Ultrasound", studio: "Cardiac Arrest Ultrasound", hours: 1, wicc: ["cardiovascular", "diagnostics"] },
+  { name: "Cardiac Infections", studio: "Cardiac Infection Cases", hours: 1, wicc: ["cardiovascular", "sepsis"] },
+  { name: "Cardiac Monitoring Patterns You Should Know", studio: "Cardiac Monitoring Patterns You Should Know", hours: 0.5, wicc: ["diagnostics", "cardiovascular"] },
+  { name: "Cardiovascular A&P (Blood Flow & Pressures)", studio: "Cardiac A&P 1", hours: 1, wicc: ["cardiovascular"] },
+  { name: "Cardiovascular A&P (Valves & Arteries)", studio: "Cardiac A&P 2", hours: 1, wicc: ["cardiovascular"] },
+  { name: "Cardiovascular Podcasts", studio: "CV Podcasts", hours: 2, wicc: ["cardiovascular"] },
+  { name: "Casualties: Basic Airways - Episode 2", studio: "Casualties: Basic Airways - Episode 2", hours: 0.25, wicc: ["none"] },
+  { name: "Casualties: Hemorrhage Control", studio: "Casualties: Hemorrhage Control", hours: 0.5, wicc: ["none"] },
+  { name: "Classifications of Shock", studio: "Classifications of Shock", hours: 0.5, wicc: ["sepsis"] },
+  { name: "Congenital Heart Defects", studio: "Congenital Heart Defects", hours: 1, wicc: ["cardiovascular"] },
+  { name: "Congestive Heart Failure", studio: "CHF", hours: 1, wicc: ["cardiovascular"] },
+  { name: "Cord Prolapse", studio: "Cord Prolapse", hours: 0.5, wicc: ["none"] },
+  { name: "Crew Resource Management", studio: "Crew Resource Management", hours: 1, wicc: ["none"] },
+  { name: "Critical 1on1 - Episode 1: Causes of Hypoxemia", studio: "Critical 1on1 - Episode 1: Causes of Hypoxemia", hours: 0.5, wicc: ["respiratory"] },
+  { name: "Critical 1on1 - Episode 2: Simplified Guide to Seizures", studio: "Critical 1on1 - Episode 2: Simplified Guide to Seizures", hours: 0.5, wicc: ["sepsis"] },
+  { name: "CVP", studio: "Central Venous Pressure", hours: 1, wicc: ["vascular", "diagnostics"] },
+  { name: "Death Notification", studio: "Death Notification", hours: 1, wicc: ["none"] },
+  { name: "Discrepancies in Testing & Treatment", studio: "Discrepancies in Testing & Treatment", hours: 1, wicc: ["diagnostics"] },
+  { name: "Disenfranchised Grief", studio: "Disenfranchised Grief", hours: 0.5, wicc: ["none"] },
+  { name: "ECG Interpretation", studio: "ECG Basics What Is Normal", hours: 1.5, wicc: ["diagnostics", "cardiovascular"] },
+  { name: "ECPR Eligibility and Preparation w/ Alec Wilcox Progress", studio: "ECPR Eligibility and Preparation w/ Alec Wilcox Progress", hours: 1, wicc: ["cardiovascular"] },
+  { name: "Educators Atlas", studio: "Content Creators", hours: 4, wicc: ["none"] },
+  { name: "EMS Culture of Safety", studio: "Pushing Positive Culture", hours: 1, wicc: ["none"] },
+  { name: "EMS Research", studio: "EMS Research", hours: 1.5, wicc: ["none"] },
+  { name: "EMT Pharmacology", studio: "EMT Pharmacology", hours: 1.5, wicc: ["pharmacology"] },
+  { name: "Endocrine EM F3", studio: "Endocrine Emergencies", hours: 1, wicc: ["sepsis"] },
+  { name: "Engineering NPPV", studio: "Engineering NPPV", hours: 2, wicc: ["respiratory"] },
+  { name: "Evidence Based Guidelines", studio: "Evidence Based Guidelines", hours: 1, wicc: ["none"] },
+  { name: "Exploring Evidence", studio: "Exploring Evidence Episode 1", hours: 0.75, wicc: ["diagnostics"] },
+  { name: "Exploring Evidence Episode 2", studio: "Exploring Evidence Episode 2", hours: 1, wicc: ["diagnostics"] },
+  { name: "Exploring Evidence Episode 3", studio: "Exploring Evidence Episode 3", hours: 1, wicc: ["diagnostics"] },
+  { name: "Exploring Evidence Episode 4", studio: "Exploring Evidence Episode 4", hours: 1, wicc: ["diagnostics"] },
+  { name: "External Ventricular Drains in Transport Part 2", studio: "External Ventricular Drains in Transport Part 2", hours: 1, wicc: ["vascular", "diagnostics"] },
+  { name: "Extra Orifice Roulette - Special Populations", studio: "Special Patient Populations", hours: 1, wicc: ["none"] },
+  { name: "Facilitating Learning", studio: "How To Facilitate Learning", hours: 1, wicc: ["none"] },
+  { name: "Flight Physiology", studio: "Flight Physiology", hours: 1, wicc: ["respiratory"] },
+  { name: "Fluid Resuscitation", studio: "Fluid Resuscitation", hours: 1, wicc: ["vascular"] },
+  { name: "Functional Provider Wellness", studio: "Functional Provider Wellness", hours: 1, wicc: ["none"] },
+  { name: "Gas laws Part One Vodcast", studio: "Gas Laws Vodcast - Part One", hours: 0.75, wicc: ["respiratory"] },
+  { name: "Gas laws Part Two Vodcast", studio: "Gas Laws Vodcast - Part Two", hours: 0.75, wicc: ["respiratory"] },
+  { name: "Geriatric Trauma", studio: "Geriatric Trauma", hours: 1, wicc: ["none"] },
+  { name: "Glucose Regulation", studio: "Glucose Lab Values", hours: 0.75, wicc: ["sepsis"] },
+  { name: "Good Reads: Cardiac Anatomy", studio: "Good Reads: Cardiac Anatomy", hours: 1, wicc: ["cardiovascular"] },
+  { name: "Good Reads: ECG Basics", studio: "Good Reads: ECG Basics", hours: 1, wicc: ["diagnostics", "cardiovascular"] },
+  { name: "Handtevy Minute", studio: "Pediatric Tips & Tricks w/ Dr. Antevy", hours: 1, wicc: ["none"] },
+  { name: "Hemorrhage Control", studio: "Hemorrhage Control", hours: 1, wicc: ["none"] },
+  { name: "HIPAA Compliance in EMS", studio: "A Little Birdie Told Me", hours: 1, wicc: ["none"] },
+  { name: "HIPAA Street Talk", studio: "HIPAA Street Talk", hours: 1, wicc: ["none"] },
+  { name: "HOTT Arrest", studio: "Trauma Arrest", hours: 2, wicc: ["none"] },
+  { name: "Hypoglycemia & Glucometer Use", studio: "Hypoglycemia & Glucometer Use", hours: 0.5, wicc: ["sepsis", "diagnostics"] },
+  { name: "Hypotension", studio: "Ultrasound in Hypotension", hours: 1, wicc: ["diagnostics"] },
+  { name: "ICP Management - CNS Injury", studio: "CNS Injury", hours: 1, wicc: ["none"] },
+  { name: "Immobilization Evidence", studio: "Immobilization Evidence", hours: 1, wicc: ["none"] },
+  { name: "Impella Transport", studio: "iHeart Perfusion", hours: 0.5, wicc: ["cardiovascular"] },
+  { name: "Implementing Ultrasound", studio: "Implementing Ultrasound", hours: 1, wicc: ["diagnostics"] },
+  { name: "Infectious Disease/ Sepsis", studio: "Close Encounters of the Infectious Kind", hours: 1, wicc: ["sepsis"] },
+  { name: "Infusion Logistics", studio: "Infusion Logistics", hours: 2, wicc: ["vascular", "pharmacology"] },
+  { name: "Inhaled Pulmonary Vasodilators", studio: "Pulmonary Vasodilators", hours: 1, wicc: ["pharmacology"] },
+  { name: "Intra-aortic Balloon Pump", studio: "Intra-Aortic Balloon Pump", hours: 1, wicc: ["vascular", "cardiovascular"] },
+  { name: "Introduction To ECMO", studio: "Out Of Body: Introduction To ECMO", hours: 1, wicc: ["cardiovascular"] },
+  { name: "Ketamine Psychotherapy", studio: "Ketamine Psychotherapy", hours: 1, wicc: ["pharmacology"] },
+  { name: "Lab Panel Cold Reads", studio: "Lab Panels", hours: 1, wicc: ["diagnostics"] },
+  { name: "Lab Values", studio: "Lab Value Interpretation", hours: 2, wicc: ["diagnostics"] },
+  { name: "Laryngoscopy Micro Skills: Case Study", studio: "Laryngoscopy Micro Skills: Case Study", hours: 1, wicc: ["none"] },
+  { name: "LVAD", studio: "Ventricular Assist Device", hours: 1, wicc: ["cardiovascular"] },
+  { name: "Maternal Emergencies", studio: "Maternal Emergencies", hours: 1, wicc: ["none"] },
+  { name: "MCI / Triage", studio: "Field Triage and MCI", hours: 1, wicc: ["none"] },
+  { name: "Mechanical Ventilation", studio: "Mechanical Ventilation", hours: 12, wicc: ["respiratory"] },
+  { name: "Mechanical Ventilation - Breath Delivery", studio: "Mechanical Ventilation - Breath Delivery", hours: 1, wicc: ["respiratory"] },
+  { name: "Mechanical Ventilation - Flow and Triggering", studio: "Mechanical Ventilation - Flow and Triggering", hours: 1, wicc: ["respiratory"] },
+  { name: "Mechanics of Breathing", studio: "Mechanics of Breathing", hours: 1, wicc: ["respiratory"] },
+  { name: "Medical Podcasts", studio: "Medical Podcasts", hours: 2, wicc: ["none"] },
+  { name: "Medical-Legal Documentation", studio: "unCharted Territory", hours: 1.5, wicc: ["none"] },
+  { name: "Medication Delivery", studio: "Medication Delivery", hours: 1, wicc: ["vascular"] },
+  { name: "Medication Math", studio: "Med Math", hours: 1, wicc: ["pharmacology"] },
+  { name: "Moral Injury", studio: "Moral Injury S1E2", hours: 1, wicc: ["none"] },
+  { name: "Musculoskeletal Trauma", studio: "Musculoskeletal Trauma", hours: 2, wicc: ["none"] },
+  { name: "Neonatal Resuscitation Part 1", studio: "Neonatal Resuscitation", hours: 1, wicc: ["none"] },
+  { name: "Neonatal Resuscitation Part 2", studio: "Compressions on a Beating Heart", hours: 1, wicc: ["none"] },
+  { name: "Neurological", studio: "Neurological Emergencies", hours: 1, wicc: ["sepsis"] },
+  { name: "Neurological Trauma", studio: "Neurological Trauma", hours: 1, wicc: ["none"] },
+  { name: "NICU Transport Logistics", studio: "Interview with a NICU Flight Nurse", hours: 1, wicc: ["none"] },
+  { name: "OB Emergencies", studio: "OB EM - The OB Cult", hours: 1, wicc: ["none"] },
+  { name: "Organ Donation in the ICU", studio: "Organ Donation in the ICU", hours: 0.5, wicc: ["sepsis"] },
+  { name: "Oxygenation", studio: "Oxygenation", hours: 1, wicc: ["respiratory"] },
+  { name: "Pain Management", studio: "Pain Management", hours: 1, wicc: ["pharmacology"] },
+  { name: "Paramedics Guide To LV Function", studio: "The EMS Guide to Inotropy", hours: 0.5, wicc: ["cardiovascular"] },
+  { name: "Pediatric Cardiac Arrest", studio: "Pediatric Cardiac Arrest", hours: 1, wicc: ["cpr", "cardiovascular"] },
+  { name: "Pediatric ECG", studio: "Pediatric ECG", hours: 1, wicc: ["diagnostics", "cardiovascular"] },
+  { name: "Pediatric Functional Residual Capacity", studio: "Pediatric Pre-Oxygenation", hours: 1, wicc: ["respiratory"] },
+  { name: "Pediatric Mechanical Ventilation", studio: "Pediatric Mechanical Ventilation", hours: 1, wicc: ["respiratory"] },
+  { name: "Pediatric Respiratory - Part 1", studio: "Pediatric Respiratory Emergencies Part One", hours: 1, wicc: ["respiratory"] },
+  { name: "Pediatric Respiratory - Part 2", studio: "Pediatric Respiratory Emergencies Part Two", hours: 1, wicc: ["respiratory"] },
+  { name: "Pediatric TBI Bundle", studio: "Pediatric TBI Bundle", hours: 0.5, wicc: ["none"] },
+  { name: "Pediatric Transport", studio: "Pediatric Transport", hours: 1, wicc: ["none"] },
+  { name: "Pediatric Trauma", studio: "Pediatric Trauma", hours: 1, wicc: ["none"] },
+  { name: "Performance Under Pressure", studio: "Performance Under Pressure", hours: 1, wicc: ["none"] },
+  { name: "Placenta Previa", studio: "Placenta Previa", hours: 0.5, wicc: ["none"] },
+  { name: "Placental Abruption", studio: "Placental Abruption", hours: 0.5, wicc: ["none"] },
+  { name: "POCUS Exams", studio: "Ultrasound Guided Pharm", hours: 1, wicc: ["diagnostics"] },
+  { name: "Point of Care Ultrasound - Lung Sliding & Pneumothorax", studio: "Does My Patient Have A Pneumothorax?", hours: 0.5, wicc: ["diagnostics", "respiratory"] },
+  { name: "Point of Care Ultrasound: Images From Sound", studio: "Images From Sound", hours: 0.5, wicc: ["diagnostics"] },
+  { name: "Point of Care Ultrasound: Is This Tachycardia Compensatory", studio: "Point of Care Ultrasound: Is This Tachycardia Compensatory", hours: 0.5, wicc: ["diagnostics", "cardiovascular"] },
+  { name: "Point of Care Ultrasound: The Probe", studio: "Point of Care Ultrasound: The Probe", hours: 0.5, wicc: ["diagnostics"] },
+  { name: "Post-intubation Sedation and Analgesia", studio: "Post-intubation Sedation and Analgesia", hours: 0.5, wicc: ["pharmacology"] },
+  { name: "Postpartum Hemorrhage", studio: "Postpartum Hemorrhage", hours: 0.5, wicc: ["none"] },
+  { name: "Preterm Labor", studio: "Preterm Labor", hours: 0.5, wicc: ["none"] },
+  { name: "Psychiatric and Behavioral Emergencies", studio: "Psychiatric and Behavioral Emergencies", hours: 2, wicc: ["none"] },
+  { name: "Pulmonary Artery Catheters", studio: "Pulmonary Artery Catheters", hours: 1, wicc: ["vascular", "diagnostics"] },
+  { name: "Pulmonary Embolism Case Study", studio: "Pulmonary Embolism Case Study", hours: 1, wicc: ["cardiovascular", "respiratory"] },
+  { name: "Recognizing and Preventing Drug Diversion", studio: "Controlled Substance Diversion", hours: 0.5, wicc: ["none"] },
+  { name: "Renal Physiology", studio: "Renal Q&A", hours: 1, wicc: ["sepsis"] },
+  { name: "Respiratory A&P", studio: "Respiratory A&P", hours: 1, wicc: ["respiratory"] },
+  { name: "Respiratory Distress vs. Failure", studio: "Distress vs Failure, Treading Water", hours: 1, wicc: ["respiratory"] },
+  { name: "Respiratory Pharmacopeia", studio: "Respiratory Pharmacopeia", hours: 1, wicc: ["pharmacology"] },
+  { name: "Rethinking Lights & Sirens", studio: "Rethinking Lights & Sirens", hours: 1, wicc: ["none"] },
+  { name: "Right Sided Logic V4R", studio: "Right Sided Logic (V4R)", hours: 1, wicc: ["diagnostics", "cardiovascular"] },
+  { name: "Right-sided ECG Vodcast", studio: "Podcast - Who Gets a Right Sided ECG? w/ Dr. Stephen Smith", hours: 0.5, wicc: ["diagnostics", "cardiovascular"] },
+  { name: "Risk Assessment", studio: "Survive The Call", hours: 1, wicc: ["none"] },
+  { name: "ROSC", studio: "Post-Resuscitation Care", hours: 1, wicc: ["cardiovascular"] },
+  { name: "RSI Cocktail", studio: "RSI Cocktail", hours: 1, wicc: ["pharmacology"] },
+  { name: "Scene Factors", studio: "Scene Logistics", hours: 1, wicc: ["none"] },
+  { name: "Scene, Mass Casualty, & Disaster Response", studio: "Flight Ops", hours: 1, wicc: ["none"] },
+  { name: "Sedation & Analgesia", studio: "Fearless Analgesia", hours: 1, wicc: ["pharmacology"] },
+  { name: "Sedative Agents", studio: "Benzodiazepines", hours: 1, wicc: ["pharmacology"] },
+  { name: "Seizures", studio: "Seizures", hours: 1, wicc: ["sepsis"] },
+  { name: "Septic Shock", studio: "Septic Shock", hours: 1, wicc: ["sepsis"] },
+  { name: "Shock & Trauma", studio: "Shock & Trauma", hours: 1, wicc: ["sepsis"] },
+  { name: "Signal Through Noise (Vital Sign Monitoring)", studio: "Signal Through Noise", hours: 1, wicc: ["diagnostics"] },
+  { name: "Special Patient Populations (Born Different)", studio: "Born Different", hours: 1, wicc: ["none"] },
+  { name: "Strokes", studio: "Stroke Care", hours: 2, wicc: ["sepsis"] },
+  { name: "Subarachnoid & The EVD", studio: "Subarachnoid & The EVD", hours: 1, wicc: ["diagnostics"] },
+  { name: "Surgical Cases From Start to Finish", studio: "Neonatal Surgical Emergencies", hours: 1, wicc: ["none"] },
+  { name: "T1 Hacks", studio: "T1 Hacks", hours: 1, wicc: ["respiratory"] },
+  { name: "The Advanced Airway Course", studio: "The Advanced Airway Course", hours: 1, wicc: ["respiratory"] },
+  { name: "The Airway Assistant Course", studio: "The Airway Assistant Course", hours: 1, wicc: ["respiratory"] },
+  { name: "The Anatomy of Trauma", studio: "Trauma Resuscitation", hours: 1, wicc: ["none"] },
+  { name: "The Deposition", studio: "The Deposition", hours: 0.75, wicc: ["none"] },
+  { name: "The RSI Summit", studio: "The RSI Summit", hours: 1, wicc: ["pharmacology"] },
+  { name: "The Ventricular Blueprint", studio: "The Ventricular Blueprint", hours: 1, wicc: ["cardiovascular"] },
+  { name: "Thoracic Dissection Goals", studio: "Thoracic Dissection Goals", hours: 0.5, wicc: ["sepsis"] },
+  { name: "Thoracic Trauma", studio: "Thoracic Trauma", hours: 1, wicc: ["none"] },
+  { name: "Thyroid Emergencies Vodcast", studio: "Thyroid Emergencies", hours: 1, wicc: ["sepsis"] },
+  { name: "Tox and Immune", studio: "Toxicology & Immunology", hours: 2, wicc: ["pharmacology"] },
+  { name: "Toxic inhalation", studio: "Toxic Inhalation", hours: 1, wicc: ["respiratory"] },
+  { name: "Training For Humeral Head IO", studio: "Training For Humeral Head IO", hours: 0.5, wicc: ["vascular"] },
+  { name: "Training For Laryngoscopy", studio: "Endotracheal Intubation", hours: 0.5, wicc: ["none"] },
+  { name: "Training For Pediatric Intubation", studio: "Training For Pediatric Intubation", hours: 0.5, wicc: ["none"] },
+  { name: "Training For Pelvic Binder Placement", studio: "Training For Pelvic Binder Placement", hours: 0.5, wicc: ["none"] },
+  { name: "Training For Surgical Cricothyrotomy", studio: "Training For Surgical Cricothyrotomy", hours: 0.5, wicc: ["none"] },
+  { name: "Training To Perform A Finger Thoracostomy", studio: "Episode 3 - Finger Thoracostomy", hours: 0.5, wicc: ["none"] },
+  { name: "Training To Perform A Needle Decompression", studio: "Episode 2 - Needle Decompression", hours: 0.5, wicc: ["none"] },
+  { name: "Training To Perform A Pediatric Needle Cricothyrotomy", studio: "Episode 4 - Needle Cricothyrotomy", hours: 0.5, wicc: ["none"] },
+  { name: "Transcutaneous Pacing 101", studio: "False Capture", hours: 1, wicc: ["cardiovascular"] },
+  { name: "Trauma Anesthesia", studio: "Trauma Anesthesia", hours: 1, wicc: ["pharmacology"] },
+  { name: "Trauma Assessment (signs)", studio: "Trauma Assessment Part Two", hours: 1, wicc: ["none"] },
+  { name: "Trauma Assessment Part 1", studio: "Trauma Assessment Part One", hours: 1, wicc: ["none"] },
+  { name: "Trauma in Pregnancy", studio: "Trauma in Pregnancy", hours: 1, wicc: ["none"] },
+  { name: "Trauma Podcast Module", studio: "Trauma Podcasts", hours: 1, wicc: ["none"] },
+  { name: "Trauma Triage & Hand-off", studio: "Trauma Triage", hours: 1, wicc: ["none"] },
+  { name: "Traumatic Head Injuries and CT", studio: "Head CT", hours: 1, wicc: ["diagnostics"] },
+  { name: "Ultrasound & The FAST Exam", studio: "Ultrasound & The FAST Exam", hours: 0.5, wicc: ["diagnostics"] },
+  { name: "Understanding COPD", studio: "Understanding COPD", hours: 0.5, wicc: ["respiratory"] },
+  { name: "Understanding CPR", studio: "Understanding CPR", hours: 0.5, wicc: ["cpr"] },
+  { name: "Understanding Pressors", studio: "Pressor Puzzle", hours: 1, wicc: ["pharmacology"] },
+  { name: "Ventilator Language", studio: "Ventilator Language", hours: 1, wicc: ["respiratory"] },
+  { name: "Vital Signs", studio: "Vital Signs", hours: 0.5, wicc: ["diagnostics"] },
+  { name: "Vital Signs - Sexual Assault Awareness", studio: "Vital Signs - Sexual Assault Awareness", hours: 1, wicc: ["none"] },
+  { name: "Wolf-Parkinson-White & Adenosine Podcast", studio: "WPW", hours: 0.5, wicc: ["cardiovascular", "pharmacology"] }
+];
+let filterCat = "all";
+function shortName(key) {
+  return CATEGORIES[key].name.split(":")[0].split(",")[0];
+}
+function buildPills() {
+  const el = document.getElementById("pills");
+  const counts = {};
+  Object.keys(CATEGORIES).forEach(k => counts[k] = 0);
+  COURSES.forEach(c => c.wicc.forEach(w => counts[w]++));
+  let html = '<button class="pill" onclick="setFilter(\'all\')" id="pill-all" style="background:' + (filterCat==='all'?'#f8fafc':'#334155') + ';color:' + (filterCat==='all'?'#0f172a':'#94a3b8') + '">All (' + COURSES.length + ')</button>';
+  Object.entries(CATEGORIES).forEach(function([key, cat]) {
+    if (key === "none") return;
+    var active = filterCat === key;
+    html += '<button class="pill" onclick="setFilter(\'' + key + '\')" id="pill-' + key + '" style="background:' + (active?cat.color:'#334155') + ';color:' + (active?'#fff':'#94a3b8') + '">' + shortName(key) + ' (' + counts[key] + ')</button>';
+  });
+  var noneActive = filterCat === "none";
+  html += '<button class="pill" onclick="setFilter(\'none\')" id="pill-none" style="background:' + (noneActive?'#6b7280':'#334155') + ';color:' + (noneActive?'#fff':'#94a3b8') + '">No match (' + counts.none + ')</button>';
+  el.innerHTML = html;
+}
+function setFilter(cat) {
+  filterCat = (filterCat === cat) ? "all" : cat;
+  render();
+}
+function render() {
+  var q = document.getElementById("search").value.toLowerCase().trim();
+  var filtered = COURSES;
+  if (q) filtered = filtered.filter(function(c) { return c.name.toLowerCase().includes(q) || c.studio.toLowerCase().includes(q); });
+  if (filterCat !== "all") filtered = filtered.filter(function(c) { return c.wicc.includes(filterCat); });
+  filtered.sort(function(a, b) { return a.name.localeCompare(b.name); });
+  buildPills();
+  document.getElementById("count").textContent = filtered.length + ' course' + (filtered.length !== 1 ? 's' : '') + ' found';
+  var el = document.getElementById("results");
+  if (filtered.length === 0) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">\ud83d\udd0d</div><div style="font-size:15px">No courses match your search</div><div style="font-size:13px;margin-top:4px">Try a different keyword</div></div>';
+    return;
+  }
+  el.innerHTML = filtered.map(function(c) {
+    var borderColor = CATEGORIES[c.wicc[0]].color;
+    var tags = c.wicc.map(function(w) {
+      var cat = CATEGORIES[w];
+      return '<span class="tag" style="background:' + cat.color + '22;color:' + cat.color + ';border:1px solid ' + cat.color + '44">' + shortName(w) + '</span>';
+    }).join("");
+    var hrs = c.hours === 1 ? "1 hr" : c.hours + " hrs";
+    return '<div class="card" style="border-left-color:' + borderColor + '"><div class="card-header"><div><div class="card-title">' + esc(c.name) + '</div><div class="card-studio">' + esc(c.studio) + '</div></div><span class="card-hours">' + hrs + '</span></div><div class="tags">' + tags + '</div></div>';
+  }).join("");
+}
+function esc(s) { var d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+render();
+</script>
+</body>
+</html><!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>WICC Course Matcher — FOAMfrat Studio</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
