@@ -27,18 +27,75 @@
   .empty { text-align: center; padding: 40px; color: #475569; }
   .empty-icon { font-size: 32px; margin-bottom: 8px; }
   .footer { text-align: center; margin-top: 32px; padding: 16px 0; border-top: 1px solid #1e293b; font-size: 11px; color: #475569; }
+  .tabs { display: flex; gap: 0; margin-bottom: 24px; border-radius: 10px; overflow: hidden; border: 2px solid #334155; }
+  .tab { flex: 1; padding: 10px 0; text-align: center; font-size: 14px; font-weight: 600; cursor: pointer; border: none; background: #1e293b; color: #94a3b8; transition: all 0.15s; }
+  .tab.active { background: #6366f1; color: #fff; }
+  .tab:hover:not(.active) { background: #334155; }
+  .view { display: none; }
+  .view.active { display: block; }
+  .upload-zone { border: 2px dashed #334155; border-radius: 12px; padding: 32px 16px; text-align: center; cursor: pointer; transition: all 0.2s; margin-bottom: 20px; }
+  .upload-zone:hover { border-color: #6366f1; background: #1e293b; }
+  .upload-zone.has-file { border-color: #10b981; border-style: solid; background: #10b98115; }
+  .upload-icon { font-size: 28px; margin-bottom: 8px; }
+  .upload-label { font-size: 15px; font-weight: 600; color: #f8fafc; }
+  .upload-hint { font-size: 12px; color: #64748b; margin-top: 4px; }
+  .req-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+  .req-row { background: #1e293b; border-radius: 10px; padding: 14px 16px; }
+  .req-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .req-name { font-size: 14px; font-weight: 600; color: #f1f5f9; }
+  .req-hrs { font-size: 13px; font-weight: 600; }
+  .req-bar-bg { height: 8px; background: #334155; border-radius: 4px; overflow: hidden; }
+  .req-bar { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
+  .req-status { font-size: 11px; margin-top: 4px; color: #94a3b8; }
+  .summary-box { background: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 20px; text-align: center; }
+  .summary-total { font-size: 32px; font-weight: 700; color: #f8fafc; }
+  .summary-label { font-size: 13px; color: #94a3b8; margin-top: 2px; }
+  .summary-status { display: inline-block; margin-top: 10px; padding: 4px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; }
+  .match-section { margin-top: 20px; }
+  .match-header { font-size: 14px; font-weight: 600; color: #94a3b8; margin-bottom: 8px; cursor: pointer; }
+  .match-header:hover { color: #f8fafc; }
+  .match-list { display: flex; flex-direction: column; gap: 4px; }
+  .match-item { font-size: 13px; padding: 8px 12px; background: #1e293b; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+  .match-item .mi-name { color: #e2e8f0; }
+  .match-item .mi-hrs { color: #38bdf8; font-weight: 600; font-size: 12px; }
+  .match-item .mi-cat { font-size: 11px; color: #94a3b8; }
+  .unmatched-item { color: #f59e0b; }
 </style>
 </head>
 <body>
 <div class="container">
-  <div style="text-align:center;margin-bottom:24px">
+  <div style="text-align:center;margin-bottom:16px">
     <h1>WICC Course Matcher</h1>
-    <p class="subtitle">Search FOAMfrat Studio courses to find their WICC renewal category</p>
+    <p class="subtitle">FOAMfrat Studio &mdash; Wisconsin Critical Care Endorsement Renewal</p>
   </div>
-  <input class="search" type="text" id="search" placeholder="Type a course name... (e.g. vasopressors, ECMO, lab)" oninput="render()">
-  <div class="pills" id="pills"></div>
-  <p class="count" id="count"></p>
-  <div class="results" id="results"></div>
+  <div class="tabs">
+    <button class="tab active" id="tab-matcher" onclick="switchTab('matcher')">Course Lookup</button>
+    <button class="tab" id="tab-tracker" onclick="switchTab('tracker')">My Progress</button>
+  </div>
+  <div class="view active" id="view-matcher">
+    <input class="search" type="text" id="search" placeholder="Type a course name... (e.g. vasopressors, ECMO, lab)" oninput="render()">
+    <div class="pills" id="pills"></div>
+    <p class="count" id="count"></p>
+    <div class="results" id="results"></div>
+  </div>
+  <div class="view" id="view-tracker">
+    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('csv-input').click()">
+      <div class="upload-icon">ð</div>
+      <div class="upload-label" id="upload-label">Import FOAMfrat Studio CSV</div>
+      <div class="upload-hint" id="upload-hint">Click to upload your course completion export</div>
+      <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="handleCSV(this)">
+    </div>
+    <div id="tracker-results" style="display:none">
+      <div class="summary-box">
+        <div class="summary-total" id="t-total">0 / 24</div>
+        <div class="summary-label">Total WICC Hours</div>
+        <div class="summary-status" id="t-status" style="background:#334155;color:#94a3b8">Upload CSV to begin</div>
+      </div>
+      <div class="req-grid" id="req-grid"></div>
+      <div class="match-section" id="matched-section"></div>
+      <div class="match-section" id="unmatched-section"></div>
+    </div>
+  </div>
   <div class="footer">WICC F-01955 | 2026â2029 Renewal | 24 total hours required<br>Always verify CE hours against your actual course completion certificates</div>
 </div>
 <script>
@@ -300,6 +357,438 @@ function render() {
 }
 function esc(s) { var d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
 render();
-</script>
-</body>
-</html>
+
+/* === Tab switching === */
+function switchTab(tab) {
+  document.getElementById("tab-matcher").className = tab === "matcher" ? "tab active" : "tab";
+  document.getElementById("tab-tracker").className = tab === "tracker" ? "tab active" : "tab";
+  document.getElementById("view-matcher").className = tab === "matcher" ? "view active" : "view";
+  document.getElentById("view-tracker").className = tab === "tracker" ? "view active" : "view";
+}
+
+/* === WICC Requirements (from F-01955 2026-2029) === */
+const REQUIREMENTS = {
+  cpr:            { required: 0, label: "CPR", note: "Current CPR required" },
+  diagnostics:    { required: 3, label: "Diagnostic Studies" },
+  vascular:       { required: 3, label: "Vascular Access" },
+  pharmacology:   { required: 6, label: "Pharmacology" },
+  cardiovascular: { required: 3, label: "Cardiovascular System" },
+  respiratory:    { required: 3, label: "Respiratory System" },
+  sepsis:         { required: 6, label: "Sepsis / MODS" }
+};
+
+/* === CSV Parser === */
+function parseCSV(text) {
+  var lines = text.split(/\r?\n/).filter(function(l) { return l.trim().length > 0; });
+  return lines.map(function(line) {
+    var parts = [];
+    var current = "";
+    var inQuotes = false;
+    for (var i = 0; i < line.length; i++) {
+      var ch = line[i];
+      if (ch === '"') { inQuotes = !inQuotes; }
+      else if (ch === ',' && !inQuotes) { parts.push(current.trim()); current = ""; }
+      else { current += ch; }
+    }
+    parts.push(current.trim());
+    return { name: parts[0] || "", studio: parts[1] || "", hours: parseFloat(parts[2]) || 0 };
+  });
+}
+
+/* === Match imported courses against COURSES database === */
+function matchCourses(imported) {
+  var matched = [];
+  var unmatched = [];
+  imported.forEach(function(imp) {
+    var impName = imp.name.toLowerCase().trim();
+    var found = COURSES.find(function(c) { return c.name.toLowerCase().trim() === impName; });
+    if (found) {
+      matched.push({ name: found.name, hours: imp.hours, wicc: found.wicc });
+    } else {
+      unmatched.push({ name: imp.name, hours: imp.hours });
+    }
+  });
+  return { matched: matched, unmatched: unmatched };
+}
+
+/* === Handle CSV upload === */
+function handleCSV(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var imported = parseCSV(e.target.result);
+    var result = matchCourses(imported);
+    renderTracker(result, file.name);
+  };
+  reader.readAsText(file);
+}
+
+/* === Render the tracker dashboard === */
+function rendW%G&6¶W"&W7VÇBÂfÆTæÖR°¢ò¢WFFRWÆöB¦öæR¢ð¢f"¦öæRÒFö7VÖVçBævWDVÆVÖVçD'B'WÆöB×¦öæR"°¢¦öæRæ6Æ74æÖRÒ'WÆöB×¦öæR2ÖfÆR#°¢Fö7VÖVçBævWDVÆVÖVçD'B'WÆöBÖÆ&VÂ"çFWD6öçFVçBÒfÆTæÖS°¢Fö7VÖVçBævWDVÆVÖVçD'B'WÆöBÖçB"çFWD6öçFVçBÒ&W7VÇBæÖF6VBæÆVæwF²"öb"²&W7VÇBæÖF6VBæÆVæwF²&W7VÇBçVæÖF6VBæÆVæwF²"6÷W'6W2ÖF6VB#° ¢Fö7VÖVçBævWDVÆVÖVçD'B'G&6¶W"×&W7VÇG2"ç7GÆRæF7ÆÒ&&Æö6²#° ¢ò¢FÆÇ÷W'2W"6FVv÷'¢ð¢f"6D÷W'2Ò·Ó°¢ö&¦V7Bæ¶W2$UT$TÔTåE2æf÷$V6gVæ7Föâ²²6D÷W'5¶µÒÒ²Ò°¢f"6D6÷W'6W2Ò·Ó°¢ö&¦V7Bæ¶W2$UT$TÔTåE2æf÷$V6gVæ7Föâ²²6D6÷W'6W5¶µÒÒµÓ²Ò° ¢&W7VÇBæÖF6VBæf÷$V6gVæ7FöâÒ°¢Òçv62æf÷$V6gVæ7Föâr°¢b$UT$TÔTåE5·uÒ°¢ò¢7ÆB÷W'2WfVæÇ7&÷726FVv÷&W2f÷"×VÇFÖ6B6÷W'6W2¢ð¢f"6&RÒÒæ÷W'2òÒçv62æÆVæwF°¢6D÷W'5·uÒ³Ò6&S°¢6D6÷W'6W5·uÒçW6²æÖS¢ÒææÖRÂ÷W'3¢6&RÒ°¢Ð¢Ò°¢Ò° ¢ò¢F÷FÂt42÷W'2W6ÇVFær&æöæR"æB5"¢ð¢f"F÷FÅv62Ò°¢ö&¦V7Bæ¶W2$UT$TÔTåE2æf÷$V6gVæ7Föâ²°¢b²ÓÒ&7""F÷FÅv62³Ò6D÷W'5¶µÓ°¢Ò° ¢ò¢7VÖÖ'¢ð¢Fö7VÖVçBævWDVÆVÖVçD'B'B×F÷FÂ"çFWD6öçFVçBÒF÷FÅv62çFôfVB²"ò#B#°¢f"7FGW4VÂÒFö7VÖVçBævWDVÆVÖVçD'B'B×7FGW2"°¢f"ÆÄÖWBÒG'VS°¢ö&¦V7Bæ¶W2$UT$TÔTåE2æf÷$V6gVæ7Föâ²°¢b²ÓÓÒ&7""&WGW&ã°¢b6D÷W'5¶µÒÂ$UT$TÔTåE5¶µÒç&WV&VBÆÄÖWBÒfÇ6S°¢Ò° ¢bÆÄÖWBbbF÷FÅv62ãÒ#B°¢7FGW4VÂçFWD6öçFVçBÒ$ÆÂ&WV&VÖVçG2ÖWB#°¢7FGW4VÂç7GÆRæ&6¶w&÷VæBÒ"3##"#°¢7FGW4VÂç7GÆRæ6öÆ÷"Ò"3##°¢ÒVÇ6R°¢f"FVf6BÒÖFæÖÂ#BÒF÷FÅv62°¢7FGW4VÂçFWD6öçFVçBÒFVf6BâòFVf6BçFôfVB²"Ö÷&R÷W'2æVVFVB"¢$6V6²æFfGVÂ6FVv÷&W2&VÆ÷r#°¢7FGW4VÂç7GÆRæ&6¶w&÷VæBÒ"6cSS##"#°¢7FGW4VÂç7GÆRæ6öÆ÷"Ò"6cSS"#°¢Ð ¢ò¢6FVv÷'&öw&W72&'2¢ð¢f"w&DFÖÂÒ"#°¢ö&¦V7BæVçG&W2$UT$TÔTåE2æf÷$V6gVæ7Föâ¶¶WÂ&WÒ°¢f"6BÒ4DTtõ$U5¶¶WÓ°¢f"'2Ò6D÷W'5¶¶WÓ°¢b¶WÓÓÒ&7""°¢f"45"Ò'2â°¢w&DFÖÂ³ÒsÆFb6Æ73Ò'&W×&÷r#âr°¢sÆFb6Æ73Ò'&W×F÷#ãÇ7â6Æ73Ò'&WÖæÖR"7GÆSÒ&6öÆ÷#¢r²6Bæ6öÆ÷"²r#ä5#Â÷7ãâr°¢sÇ7â6Æ73Ò'&WÖ'2"7GÆSÒ&6öÆ÷#¢r²45"òr3#r¢r6cSS"r²r#âr²45"ò.)É27W'&VçB"¢.)ªæ÷Bf÷VæB"²sÂ÷7ããÂöFcâr°¢sÆFb6Æ73Ò'&W×7FGW2#âr²&Wææ÷FR²sÂöFcãÂöFcâs°¢&WGW&ã°¢Ð¢f"7BÒ&Wç&WV&VBâòÖFæÖâÂ'2ò&Wç&WV&VB¢¢°¢f"ÖWBÒ'2ãÒ&Wç&WV&VC°¢f"&$6öÆ÷"ÒÖWBò"3#"¢6Bæ6öÆ÷#°¢w&DFÖÂ³ÒsÆFb6Æ73Ò'&W×&÷r#âr°¢sÆFb6Æ73Ò'&W×F÷#ãÇ7â6Æ73Ò'&WÖæÖR"7GÆSÒ&6öÆ÷#¢r²6Bæ6öÆ÷"²r#âr²W62&WæÆ&VÂ²sÂ÷7ãâr°¢sÇ7â6Æ73Ò'&WÖ'2"7GÆSÒ&6öÆ÷#¢r²ÖWBòr3#r¢r6cSS"r²r#âr²'2çFôfVB²ròr²&Wç&WV&VB²r'2r²ÖWBòr)É2r¢rr²sÂ÷7ããÂöFcâr°¢sÆFb6Æ73Ò'&WÖ&"Ö&r#ãÆFb6Æ73Ò'&WÖ&""7GÆSÒ'vGF¢r²7B²rS¶&6¶w&÷VæC¢r²&$6öÆ÷"²r#ãÂöFcãÂöFcâr°¢sÆFb6Æ73Ò'&W×7FGW2#âr²6D6÷W'6W5¶¶WÒæÖgVæ7Föâ2²&WGW&â2ææÖR²rr²2æ÷W'2çFôfVB²vs²Òæ¦öârÂr²sÂöFcãÂöFcâs°¢Ò°¢Fö7VÖVçBævWDVÆVÖVçD'B'&WÖw&B"æææW$DÔÂÒw&DFÖÃ° ¢ò¢ÖF6VB6÷W'6W2Æ7B¢ð¢f"ÖF6VDFÖÂÒsÆFb6Æ73Ò&ÖF6ÖVFW""öæ6Æ6³Ò'F2ææWDVÆVÖVçE6&Æærç7GÆRæF7Æ×F2ææWDVÆVÖVçE6&Æærç7GÆRæF7ÆÓÓÕÂvæöæUÂsõÂvfÆWÂs¥ÂvæöæUÂr#î)kÖF6VB6÷W'6W2r²&W7VÇBæÖF6VBæÆVæwF²rÂöFcãÆFb6Æ73Ò&ÖF6ÖÆ7B"7GÆSÒ&F7Æ¦æöæR#âs°¢&W7VÇBæÖF6VBç6÷'BgVæ7FöâÂ"²&WGW&âææÖRæÆö6ÆT6ö×&R"ææÖR²Ò°¢&W7VÇBæÖF6VBæf÷$V6gVæ7FöâÒ°¢f"6G2ÒÒçv62æÖgVæ7Föâr²&WGW&â4DTtõ$U5·uÒò6÷'DæÖRr¢s²Òæ¦öâ"Â"°¢ÖF6VDFÖÂ³ÒsÆFb6Æ73Ò&ÖF6ÖFVÒ#ãÆFcãÇ7â6Æ73Ò&ÖÖæÖR#âr²W62ÒææÖR²sÂ÷7ããÆ'#ãÇ7â6Æ73Ò&ÖÖ6B#âr²6G2²sÂ÷7ããÂöFcãÇ7â6Æ73Ò&ÖÖ'2#âr²Òæ÷W'2²vÂ÷7ããÂöFcâs°¢Ò°¢ÖF6VDFÖÂ³ÒsÂöFcâs°¢Fö7VÖVçBævWDVÆVÖVçD'B&ÖF6VB×6V7Föâ"æææW$DÔÂÒÖF6VDFÖÃ° ¢ò¢VæÖF6VB6÷W'6W2Æ7B¢ð¢b&W7VÇBçVæÖF6VBæÆVæwFâ°¢f"VæÔFÖÂÒsÆFb6Æ73Ò&ÖF6ÖVFW""öæ6Æ6³Ò'F2ææWDVÆVÖVçE6&Æærç7GÆRæF7Æ×F2ææWDVÆVÖVçE6&Æærç7GÆRæF7ÆÓÓÕÂvæöæUÂsõÂvfÆWÂs¥ÂvæöæUÂr#î)kVæÖF6VB6÷W'6W2r²&W7VÇBçVæÖF6VBæÆVæwF²r(	Bæ÷B6÷VçFVBF÷v&Bt43ÂöFcãÆFb6Æ73Ò&ÖF6ÖÆ7B"7GÆSÒ&F7Æ¦æöæR#âs°¢&W7VÇBçVæÖF6VBæf÷$V6gVæ7FöâR°¢VæÔFÖÂ³ÒsÆFb6Æ73Ò&ÖF6ÖFVÒVæÖF6VBÖFVÒ#ãÇ7â6Æ73Ò&ÖÖæÖR#âr²W62RææÖR²sÂ÷7ããÇ7â6Æ73Ò&ÖÖ'2#âr²Ræ÷W'2²vÂ÷7ããÂöFcâs°¢Ò°¢VæÔFÖÂ³ÒsÂöFcâs°¢Fö7VÖVçBævWDVÆVÖVçD'B'VæÖF6VB×6V7Föâ"æææW$DÔÂÒVæÔFÖÃ°¢ÒVÇ6R°¢Fö7VÖVçBævWDVÆVÖVçD'B'VæÖF6VB×6V7Föâ"æææW$DÔÂÒrs°¢Ð§Ð£Â÷67&Cà£Âö&öGà£ÂöFÖÃ<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WICC Course Matcher â FOAMfrat Studio</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { min-height: 100vh; background: #0f172a; color: #e2e8f0; font-family: system-ui, -apple-system, sans-serif; }
+  .container { max-width: 800px; margin: 0 auto; padding: 24px 16px; }
+  h1 { font-size: 24px; font-weight: 700; color: #f8fafc; text-align: center; }
+  .subtitle { font-size: 14px; color: #94a3b8; text-align: center; margin-top: 4px; }
+  .search { width: 100%; padding: 12px 16px; font-size: 16px; border-radius: 10px; border: 2px solid #334155; background: #1e293b; color: #f8fafc; outline: none; margin-bottom: 16px; }
+  .search:focus { border-color: #6366f1; }
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
+  .pill { padding: 6px 12px; border-radius: 20px; border: none; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+  .pill:hover { opacity: 0.85; }
+  .count { font-size: 13px; color: #64748b; margin-bottom: 12px; }
+  .results { display: flex; flex-direction: column; gap: 8px; }
+  .card { background: #1e293b; border-radius: 10px; padding: 14px 16px; border-left: 4px solid #6b7280; }
+  .card-header { display: flex; justify-content: space-between; align-items: flex-start; }
+  .card-title { font-size: 15px; font-weight: 600; color: #f1f5f9; }
+  .card-hours { font-size: 13px; font-weight: 700; color: #38bdf8; white-space: nowrap; margin-left: 12px; background: #0c4a6e; padding: 2px 8px; border-radius: 6px; }
+  .card-studio { font-size: 12px; color: #64748b; margin-top: 2px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .tag { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .empty { text-align: center; padding: 40px; color: #475569; }
+  .empty-icon { font-size: 32px; margin-bottom: 8px; }
+  .footer { text-align: center; margin-top: 32px; padding: 16px 0; border-top: 1px solid #1e293b; font-size: 11px; color: #475569; }
+  .tabs { display: flex; gap: 0; margin-bottom: 24px; border-radius: 10px; overflow: hidden; border: 2px solid #334155; }
+  .tab { flex: 1; padding: 10px 0; text-align: center; font-size: 14px; font-weight: 600; cursor: pointer; border: none; background: #1e293b; color: #94a3b8; transition: all 0.15s; }
+  .tab.active { background: #6366f1; color: #fff; }
+  .tab:hover:not(.active) { background: #334155; }
+  .view { display: none; }
+  .view.active { display: block; }
+  .upload-zone { border: 2px dashed #334155; border-radius: 12px; padding: 32px 16px; text-align: center; cursor: pointer; transition: all 0.2s; margin-bottom: 20px; }
+  .upload-zone:hover { border-color: #6366f1; background: #1e293b; }
+  .upload-zone.has-file { border-color: #10b981; border-style: solid; background: #10b98115; }
+  .upload-icon { font-size: 28px; margin-bottom: 8px; }
+  .upload-label { font-size: 15px; font-weight: 600; color: #f8fafc; }
+  .upload-hint { font-size: 12px; color: #64748b; margin-top: 4px; }
+  .req-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+  .req-row { background: #1e293b; border-radius: 10px; padding: 14px 16px; }
+  .req-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .req-name { font-size: 14px; font-weight: 600; color: #f1f5f9; }
+  .req-hrs { font-size: 13px; font-weight: 600; }
+  .req-bar-bg { height: 8px; background: #334155; border-radius: 4px; overflow: hidden; }
+  .req-bar { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
+  .req-status { font-size: 11px; margin-top: 4px; color: #94a3b8; }
+  .summary-box { background: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 20px; text-align: center; }
+  .summary-total { font-size: 32px; font-weight: 700; color: #f8fafc; }
+  .summary-label { font-size: 13px; color: #94a3b8; margin-top: 2px; }
+  .summary-status { display: inline-block; margin-top: 10px; padding: 4px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; }
+  .match-section { margin-top: 20px; }
+  .match-header { font-size: 14px; font-weight: 600; color: #94a3b8; margin-bottom: 8px; cursor: pointer; }
+  .match-header:hover { color: #f8fafc; }
+  .match-list { display: flex; flex-direction: column; gap: 4px; }
+  .match-item { font-size: 13px; padding: 8px 12px; background: #1e293b; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+  .match-item .mi-name { color: #e2e8f0; }
+  .match-item .mi-hrs { color: #38bdf8; font-weight: 600; font-size: 12px; }
+  .match-item .mi-cat { font-size: 11px; color: #94a3b8; }
+  .unmatched-item { color: #f59e0b; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div style="text-align:center;margin-bottom:16px">
+    <h1>WICC Course Matcher</h1>
+    <p class="subtitle">FOAMfrat Studio &mdash; Wisconsin Critical Care Endorsement Renewal</p>
+  </div>
+  <div class="tabs">
+    <button class="tab active" id="tab-matcher" onclick="switchTab('matcher')">Course Lookup</button>
+    <button class="tab" id="tab-tracker" onclick="switchTab('tracker')">My Progress</button>
+  </div>
+  <div class="view active" id="view-matcher">
+    <input class="search" type="text" id="search" placeholder="Type a course name... (e.g. vasopressors, ECMO, lab)" oninput="render()">
+    <div class="pills" id="pills"></div>
+    <p class="count" id="count"></p>
+    <div class="results" id="results"></div>
+  </div>
+  <div class="view" id="view-tracker">
+    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('csv-input').click()">
+      <div class="upload-icon">ð</div>
+      <div class="upload-label" id="upload-label">Import FOAMfrat Studio CSV</div>
+      <div class="upload-hint" id="upload-hint">Click to upload your course completion export</div>
+      <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="handleCSV(this)">
+    </div>
+    <div id="tracker-results" style="display:none">
+      <div class="summary-box">
+        <div class="summary-total" id="t-total">0 / 24</div>
+        <div class="summary-label">Total WICC Hours</div>
+        <div class="summary-status" id="t-status" style="background:#334155;color:#94a3b8">Upload CSV to begin</div>
+      </div>
+      <div class="req-grid" id="req-grid"></div>
+      <div class="match-section" id="matched-section"></div>
+      <div class="match-section" id="unmatched-section"></div>
+    </div>
+  </div>
+  <div class="footer">WICC F-01955 | 2026â2029 Renewal | 24 total hours required<br>Always verify CE hours against your actual course completion certificates</div>
+</div>
+<script>
+const CATEGORIES = {
+  cpr:            { name: "CPR",                                              color: "#ef4444" },
+  diagnostics:    { name: "Diagnostic Studies: Lab Interpretation, Radiology", color: "#f59e0b" },
+  vascular:       { name: "Vascular Access, Fluid and Blood Administration",  color: "#10b981" },
+  pharmacology:   { name: "Pharmacology",                                     color: "#6366f1" },
+  cardiovascular: { name: "Cardiovascular System",                            color: "#ec4899" },
+  respiratory:    { name: "Respiratory System",                               color: "#0ea5e9" },
+  sepsis:         { name: "Sepsis and Multiple Organ Dysfunction Syndrome",   color: "#8b5cf6" },
+  none:           { name: "No clear WICC match",                              color: "#6b7280" }
+};
+const COURSES = [
+  { name: "7-Sigma Procedure Lab", studio: "FOAMfrat 7Sigma Procedure Lab", hours: 1, wicc: ["none"] },
+  { name: "Abdmominal Anatomy", studio: "Abdmominal Anatomy", hours: 0.5, wicc: ["none"] },
+  { name: "Abdominal Trauma", studio: "Gut Instinct - Abdominal Trauma", hours: 1, wicc: ["none"] },
+  { name: "Acid-Base & Oxygenation", studio: "Acid-Base", hours: 1.5, wicc: ["respiratory"] },
+  { name: "Acute Coronary Syndrome", studio: "Acute Coronary Syndrome", hours: 1.5, wicc: ["cardiovascular"] },
+  { name: "Administrative Betrayal", studio: "Administrative Betrayal", hours: 0.5, wicc: ["none"] },
+  { name: "Adrenal Crisis Vodcast", studio: "Adrenal Crisis", hours: 0.5, wicc: ["sepsis"] },
+  { name: "Advanced Acid-Base - Metabolic Acidosis & Ventilation", studio: "Advanced Acid-Base - Metabolic Acidosis & Ventilation", hours: 1, wicc: ["respiratory"] },
+  { name: "Airway Podcasts", studio: "Airway Podcasts", hours: 1, wicc: ["respiratory"] },
+  { name: "Airway Techniques", studio: "Axis = Access", hours: 2, wicc: ["respiratory"] },
+  { name: "Ambulance Accident Case Study", studio: "I Rolled My Ambulance", hours: 1, wicc: ["none"] },
+  { name: "Ambulance Safety", studio: "Ambulance Operations", hours: 0.5, wicc: ["none"] },
+  { name: "Animated Guide to Disseminated Intravascular Coagulation", studio: "Animated Guide to Disseminated Intravascular Coagulation", hours: 1, wicc: ["sepsis", "diagnostics"] },
+  { name: "Animation Guide To ARDS", studio: "Animation Guide To ARDS", hours: 1, wicc: ["respiratory"] },
+  { name: "Applied Acid Base", studio: "CO2 Elimination", hours: 1, wicc: ["respiratory"] },
+  { name: "Approaching Algorithms", studio: "Stressed Circuits - Tachycardia and Bradycardia", hours: 2, wicc: ["cardiovascular"] },
+  { name: "Arterial Line Placement", studio: "Arterial Line Placement", hours: 1, wicc: ["vascular"] },
+  { name: "Arterial Lines", studio: "Anatomy of The Arterial Line", hours: 1, wicc: ["vascular", "diagnostics"] },
+  { name: "Arterial Waveforms", studio: "Arterial Waveforms", hours: 0.5, wicc: ["diagnostics"] },
+  { name: "At-Risk Populations", studio: "At-Risk Populations", hours: 1, wicc: ["none"] },
+  { name: "Bariatric & Geriatric Population", studio: "Special Considerations (Bariatric & Geriatric)", hours: 1, wicc: ["none"] },
+  { name: "Bedside Guide To Vasopressors", studio: "Bedside Guide To Vasopressors", hours: 0.5, wicc: ["pharmacology"] },
+  { name: "Blood Components & Administration", studio: "Blood Logistics", hours: 1, wicc: ["vascular"] },
+  { name: "Blood Transfusion and Resuscitation", studio: "Blood Transfusion and Resuscitation", hours: 1, wicc: ["vascular"] },
+  { name: "Bloodlines: Whole Blood Implementation", studio: "Bloodlines: Whole Blood Implementation", hours: 0.5, wicc: ["vascular"] },
+  { name: "Bougie Techniques Podcast", studio: "Bougie Technique", hours: 0.5, wicc: ["none"] },
+  { name: "Burns", studio: "Burns", hours: 1, wicc: ["none"] },
+  { name: "Capnography", studio: "Capnography", hours: 1, wicc: ["diagnostics", "respiratory"] },
+  { name: "Cardiac Arrest", studio: "Cardiac Arrest", hours: 2, wicc: ["cpr", "cardiovascular"] },
+  { name: "Cardiac Arrest Ultrasound", studio: "Cardiac Arrest Ultrasound", hours: 1, wicc: ["cardiovascular", "diagnostics"] },
+  { name: "Cardiac Infections", studio: "Cardiac Infection Cases", hours: 1, wicc: ["cardiovascular", "sepsis"] },
+  { name: "Cardiac Monitoring Patterns You Should Know", studio: "Cardiac Monitoring Patterns You Should Know", hours: 0.5, wicc: ["diagnostics", "cardiovascular"] },
+  { name: "Cardiovascular A&P (Blood Flow & Pressures)", studio: "Cardiac A&P 1", hours: 1, wicc: ["cardiovascular"] },
+  { name: "Cardiovascular A&P (Valves & Arteries)", studio: "Cardiac A&P 2", hours: 1, wicc: ["cardiovascular"] },
+  { name: "Cardiovascular Podcasts", studio: "CV Podcasts", hours: 2, wicc: ["cardiovascular"] },
+  { name: "Casualties: Basic Airways - Episode 2", studio: "Casualties: Basic Airways - Episode 2", hours: 0.25, wicc: ["none"] },
+  { name: "Casualties: Hemorrhage Control", studio: "Casualties: Hemorrhage Control", hours: 0.5, wicc: ["none"] },
+  { name: "Classifications of Shock", studio: "Classifications of Shock", hours: 0.5, wicc: ["sepsis"] },
+  { name: "Congenital Heart Defects", studio: "Congenital Heart Defects", hours: 1, wicc: ["cardiovascular"] },
+  { name: "Congestive Heart Failure", studio: "CHF", hours: 1, wicc: ["cardiovascular"] },
+  { name: "Cord Prolapse", studio: "Cord Prolapse", hours: 0.5, wicc: ["none"] },
+  { name: "Crew Resource Management", studio: "Crew Resource Management", hours: 1, wicc: ["none"] },
+  { name: "Critical 1on1 - Episode 1: Causes of Hypoxemia", studio: "Critical 1on1 - Episode 1: Causes of Hypoxemia", hours: 0.5, wicc: ["respiratory"] },
+  { name: "Critical 1on1 - Episode 2: Simplified Guide to Seizures", studio: "Critical 1on1 - Episode 2: Simplified Guide to Seizures", hours: 0.5, wicc: ["none"] },
+  { name: "CVP", studio: "Central Venous Pressure", hours: 1, wicc: ["vascular", "diagnostics"] },
+  { name: "Death Notification", studio: "Death Notification", hours: 1, wicc: ["none"] },
+  { name: "Discrepancies in Testing & Treatment", studio: "Discrepancies in Testing & Treatment", hours: 1, wicc: ["diagnostics"] },
+  { name: "Disenfranchised Grief", studio: "Disenfranchised Grief", hours: 0.5, wicc: ["none"] },
+  { name: "ECG Interpretation", studio: "ECG Basics What Is Normal", hours: 1.5, wicc: ["diagnostics", "cardiovascular"] },
+  { name: "ECPR Eligibility and Preparation w/ Alec Wilcox Progress", studio: "ECPR Eligibility and Preparation w/ Alec Wilcox Progress", hours: 1, wicc: ["cardiovascular"] },
+  { name: "Educators Atlas", studio: "Content Creators", hours: 4, wicc: ["none"] },
+  { name: "EMS Culture of Safety", studio: "Pushing Positive Culture", hours: 1, wicc: ["none"] },
+  { name: "EMS Research", studio: "EMS Research", hours: 1.5, wicc: ["none"] },
+  { name: "EMT Pharmacology", studio: "EMT Pharmacology", hours: 1.5, wicc: ["pharmacology"] },
+  { name: "Endocrine EM F3", studio: "Endocrine Emergencies", hours: 1, wicc: ["sepsis"] },
+  { name: "Engineering NPPV", studio: "Engineering NPPV", hours: 2, wicc: ["respiratory"] },
+  { name: "Evidence Based Guidelines", studio: "Evidence Based Guidelines", hours: 1, wicc: ["none"] },
+  { name: "Exploring Evidence", studio: "Exploring Evidence Episode 1", hours: 0.75, wicc: ["diagnostics"] },
+  { name: "Exploring Evidence Episode 2", studio: "Exploring Evidence Episode 2", hours: 1, wicc: ["diagnostics"] },
+  { name: "Exploring Evidence Episode 3", studio: "Exploring Evidence Episode 3", hours: 1, wicc: ["diagnostics"] },
+  { name: "Exploring Evidence Episode 4", studio: "Exploring Evidence Episode 4", hours: 1, wicc: ["diagnostics"] },
+  { name: "External Ventricular Drains in Transport Part 2", studio: "External Ventricular Drains in Transport Part 2", hours: 1, wicc: ["vascular", "diagnostics"] },
+  { name: "Extra Orifice Roulette - Special Populations", studio: "Special Patient Populations", hours: 1, wicc: ["none"] },
+  { name: "Facilitating Learning", studio: "How To Facilitate Learning", hours: 1, wicc: ["none"] },
+  { name: "Flight Physiology", studio: "Flight Physiology", hours: 1, wicc: ["respiratory"] },
+  { name: "Fluid Resuscitation", studio: "Fluid Resuscitation", hours: 1, wicc: ["vascular"] },
+  { name: "Functional Provider Wellness", studio: "Functional Provider Wellness", hours: 1, wicc: ["none"] },
+  { name: "Gas laws Part One Vodcast", studio: "Gas Laws Vodcast - Part One", hours: 0.75, wicc: ["respiratory"] },
+  { name: "Gas laws Part Two Vodcast", studio: "Gas Laws Vodcast - Part Two", hours: 0.75, wicc: ["respiratory"] },
+  { name: "Geriatric Trauma", studio: "Geriatric Trauma", hours: 1, wicc: ["none"] },
+  { name: "Glucose Regulation", studio: "Glucose Lab Values", hours: 0.75, wicc: ["none"] },
+  { name: "Good Reads: Cardiac Anatomy", studio: "Good Reads: Cardiac Anatomy", hours: 1, wicc: ["cardiovascular"] },
+  { name: "Good Reads: ECG Basics", studio: "Good Reads: ECG Basics", hours: 1, wicc: ["diagnostics", "cardiovascular"] },
+  { name: "Handtevy Minute", studio: "Pediatric Tips & Tricks w/ Dr. Antevy", hours: 1, wicc: ["none"] },
+  { name: "Hemorrhage Control", studio: "Hemorrhage Control", hours: 1, wicc: ["none"] },
+  { name: "HIPAA Compliance in EMS", studio: "A Little Birdie Told Me", hours: 1, wicc: ["none"] },
+  { name: "HIPAA Street Talk", studio: "HIPAA Street Talk", hours: 1, wicc: ["none"] },
+  { name: "HOTT Arrest", studio: "Trauma Arrest", hours: 2, wicc: ["none"] },
+  { name: "Hypoglycemia & Glucometer Use", studio: "Hypoglycemia & Glucometer Use", hours: 0.5, wicc: ["diagnostics"] },
+  { name: "Hypotension", studio: "Ultrasound in Hypotension", hours: 1, wicc: ["diagnostics"] },
+  { name: "ICP Management - CNS Injury", studio: "CNS Injury", hours: 1, wicc: ["none"] },
+  { name: "Immobilization Evidence", studio: "Immobilization Evidence", hours: 1, wicc: ["none"] },
+  { name: "Impella Transport", studio: "iHeart Perfusion", hours: 0.5, wicc: ["cardiovascular"] },
+  { name: "Implementing Ultrasound", studio: "Implementing Ultrasound", hours: 1, wicc: ["diagnostics"] },
+  { name: "Infectious Disease/ Sepsis", studio: "Close Encounters of the Infectious Kind", hours: 1, wicc: ["sepsis"] },
+  { name: "Infusion Logistics", studio: "Infusion Logistics", hours: 2, wicc: ["vascular", "pharmacology"] },
+  { name: "Inhaled Pulmonary Vasodilators", studio: "Pulmonary Vasodilators", hours: 1, wicc: ["pharmacology"] },
+  { name: "Intra-aortic Balloon Pump", studio: "Intra-Aortic Balloon Pump", hours: 1, wicc: ["vascular", "cardiovascular"] },
+  { name: "Introduction To ECMO", studio: "Out Of Body: Introduction To ECMO", hours: 1, wicc: ["cardiovascular"] },
+  { name: "Ketamine Psychotherapy", studio: "Ketamine Psychotherapy", hours: 1, wicc: ["pharmacology"] },
+  { name: "Lab Panel Cold Reads", studio: "Lab Panels", hours: 1, wicc: ["diagnostics"] },
+  { name: "Lab Values", studio: "Lab Value Interpretation", hours: 2, wicc: ["diagnostics"] },
+  { name: "Laryngoscopy Micro Skills: Case Study", studio: "Laryngoscopy Micro Skills: Case Study", hours: 1, wicc: ["none"] },
+  { name: "LVAD", studio: "Ventricular Assist Device", hours: 1, wicc: ["cardiovascular"] },
+  { name: "Maternal Emergencies", studio: "Maternal Emergencies", hours: 1, wicc: ["none"] },
+  { name: "MCI / Triage", studio: "Field Triage and MCI", hours: 1, wicc: ["none"] },
+  { name: "Mechanical Ventilation", studio: "Mechanical Ventilation", hours: 12, wicc: ["respiratory"] },
+  { name: "Mechanical Ventilation - Breath Delivery", studio: "Mechanical Ventilation - Breath Delivery", hours: 1, wicc: ["respiratory"] },
+  { name: "Mechanical Ventilation - Flow and Triggering", studio: "Mechanical Ventilation - Flow and Triggering", hours: 1, wicc: ["respiratory"] },
+  { name: "Mechanics of Breathing", studio: "Mechanics of Breathing", hours: 1, wicc: ["respiratory"] },
+  { name: "Medical Podcasts", studio: "Medical Podcasts", hours: 2, wicc: ["none"] },
+  { name: "Medical-Legal Documentation", studio: "unCharted Territory", hours: 1.5, wicc: ["none"] },
+  { name: "Medication Delivery", studio: "Medication Delivery", hours: 1, wicc: ["vascular"] },
+  { name: "Medication Math", studio: "Med Math", hours: 1, wicc: ["pharmacology"] },
+  { name: "Moral Injury", studio: "Moral Injury S1E2", hours: 1, wicc: ["none"] },
+  { name: "Musculoskeletal Trauma", studio: "Musculoskeletal Trauma", hours: 2, wicc: ["none"] },
+  { name: "Neonatal Resuscitation Part 1", studio: "Neonatal Resuscitation", hours: 1, wicc: ["none"] },
+  { name: "Neonatal Resuscitation Part 2", studio: "Compressions on a Beating Heart", hours: 1, wicc: ["none"] },
+  { name: "Neurological", studio: "Neurological Emergencies", hours: 1, wicc: ["sepsis"] },
+  { name: "Neurological Trauma", studio: "Neurological Trauma", hours: 1, wicc: ["none"] },
+  { name: "NICU Transport Logistics", studio: "Interview with a NICU Flight Nurse", hours: 1, wicc: ["none"] },
+  { name: "OB Emergencies", studio: "OB EM - The OB Cult", hours: 1, wicc: ["none"] },
+  { name: "Organ Donation in the ICU", studio: "Organ Donation in the ICU", hours: 0.5, wicc: ["sepsis"] },
+  { name: "Oxygenation", studio: "Oxygenation", hours: 1, wicc: ["respiratory"] },
+  { name: "Pain Management", studio: "Pain Management", hours: 1, wicc: ["pharmacology"] },
+  { name: "Paramedics Guide To LV Function", studio: "The EMS Guide to Inotropy", hours: 0.5, wicc: ["cardiovascular"] },
+  { name: "Pediatric Cardiac Arrest", studio: "Pediatric Cardiac Arrest", hours: 1, wicc: ["cpr", "cardiovascular"] },
+  { name: "Pediatric ECG", studio: "Pediatric ECG", hours: 1, wicc: ["diagnostics", "cardiovascular"] },
+  { name: "Pediatric Functional Residual Capacity", studio: "Pediatric Pre-Oxygenation", hours: 1, wicc: ["respiratory"] },
+  { name: "Pediatric Mechanical Ventilation", studio: "Pediatric Mechanical Ventilation", hours: 1, wicc: ["respiratory"] },
+  { name: "Pediatric Respiratory - Part 1", studio: "Pediatric Respiratory Emergencies Part One", hours: 1, wicc: ["respiratory"] },
+  { name: "Pediatric Respiratory - Part 2", studio: "Pediatric Respiratory Emergencies Part Two", hours: 1, wicc: ["respiratory"] },
+  { name: "Pediatric TBI Bundle", studio: "Pediatric TBI Bundle", hours: 0.5, wicc: ["none"] },
+  { name: "Pediatric Transport", studio: "Pediatric Transport", hours: 1, wicc: ["none"] },
+  { name: "Pediatric Trauma", studio: "Pediatric Trauma", hours: 1, wicc: ["none"] },
+  { name: "Performance Under Pressure", studio: "Performance Under Pressure", hours: 1, wicc: ["none"] },
+  { name: "Placenta Previa", studio: "Placenta Previa", hours: 0.5, wicc: ["none"] },
+  { name: "Placental Abruption", studio: "Placental Abruption", hours: 0.5, wicc: ["none"] },
+  { name: "POCUS Exams", studio: "Ultrasound Guided Pharm", hours: 1, wicc: ["diagnostics"] },
+  { name: "Point of Care Ultrasound - Lung Sliding & Pneumothorax", studio: "Does My Patient Have A Pneumothorax?", hours: 0.5, wicc: ["diagnostics", "respiratory"] },
+  { name: "Point of Care Ultrasound: Images From Sound", studio: "Images From Sound", hours: 0.5, wicc: ["diagnostics"] },
+  { name: "Point of Care Ultrasound: Is This Tachycardia Compensatory", studio: "Point of Care Ultrasound: Is This Tachycardia Compensatory", hours: 0.5, wicc: ["diagnostics", "cardiovascular"] },
+  { name: "Point of Care Ultrasound: The Probe", studio: "Point of Care Ultrasound: The Probe", hours: 0.5, wicc: ["diagnostics"] },
+  { name: "Post-intubation Sedation and Analgesia", studio: "Post-intubation Sedation and Analgesia", hours: 0.5, wicc: ["pharmacology"] },
+  { name: "Postpartum Hemorrhage", studio: "Postpartum Hemorrhage", hours: 0.5, wicc: ["none"] },
+  { name: "Preterm Labor", studio: "Preterm Labor", hours: 0.5, wicc: ["none"] },
+  { name: "Psychiatric and Behavioral Emergencies", studio: "Psychiatric and Behavioral Emergencies", hours: 2, wicc: ["none"] },
+  { name: "Pulmonary Artery Catheters", studio: "Pulmonary Artery Catheters", hours: 1, wicc: ["vascular", "diagnostics"] },
+  { name: "Pulmonary Embolism Case Study", studio: "Pulmonary Embolism Case Study", hours: 1, wicc: ["cardiovascular", "respiratory"] },
+  { name: "Recognizing and Preventing Drug Diversion", studio: "Controlled Substance Diversion", hours: 0.5, wicc: ["none"] },
+  { name: "Renal Physiology", studio: "Renal Q&A", hours: 1, wicc: ["sepsis"] },
+  { name: "Respiratory A&P", studio: "Respiratory A&P", hours: 1, wicc: ["respiratory"] },
+  { name: "Respiratory Distress vs. Failure", studio: "Distress vs Failure, Treading Water", hours: 1, wicc: ["respiratory"] },
+  { name: "Respiratory Pharmacopeia", studio: "Respiratory Pharmacopeia", hours: 1, wicc: ["pharmacology"] },
+  { name: "Rethinking Lights & Sirens", studio: "Rethinking Lights & Sirens", hours: 1, wicc: ["none"] },
+  { name: "Right Sided Logic V4R", studio: "Right Sided Logic (V4R)", hours: 1, wicc: ["diagnostics", "cardiovascular"] },
+  { name: "Right-sided ECG Vodcast", studio: "Podcast - Who Gets a Right Sided ECG? w/ Dr. Stephen Smith", hours: 0.5, wicc: ["diagnostics", "cardiovascular"] },
+  { name: "Risk Assessment", studio: "Survive The Call", hours: 1, wicc: ["none"] },
+  { name: "ROSC", studio: "Post-Resuscitation Care", hours: 1, wicc: ["cardiovascular"] },
+  { name: "RSI Cocktail", studio: "RSI Cocktail", hours: 1, wicc: ["pharmacology"] },
+  { name: "Scene Factors", studio: "Scene Logistics", hours: 1, wicc: ["none"] },
+  { name: "Scene, Mass Casualty, & Disaster Response", studio: "Flight Ops", hours: 1, wicc: ["none"] },
+  { name: "Sedation & Analgesia", studio: "Fearless Analgesia", hours: 1, wicc: ["pharmacology"] },
+  { name: "Sedative Agents", studio: "Benzodiazepines", hours: 1, wicc: ["pharmacology"] },
+  { name: "Seizures", studio: "Seizures", hours: 1, wicc: ["none"] },
+  { name: "Septic Shock", studio: "Septic Shock", hours: 1, wicc: ["sepsis"] },
+  { name: "Shock & Trauma", studio: "Shock & Trauma", hours: 1, wicc: ["sepsis"] },
+  { name: "Signal Through Noise (Vital Sign Monitoring)", studio: "Signal Through Noise", hours: 1, wicc: ["diagnostics"] },
+  { name: "Special Patient Populations (Born Different)", studio: "Born Different", hours: 1, wicc: ["none"] },
+  { name: "Strokes", studio: "Stroke Care", hours: 2, wicc: ["none"] },
+  { name: "Subarachnoid & The EVD", studio: "Subarachnoid & The EVD", hours: 1, wicc: ["diagnostics"] },
+  { name: "Surgical Cases From Start to Finish", studio: "Neonatal Surgical Emergencies", hours: 1, wicc: ["none"] },
+  { name: "T1 Hacks", studio: "T1 Hacks", hours: 1, wicc: ["respiratory"] },
+  { name: "The Advanced Airway Course", studio: "The Advanced Airway Course", hours: 1, wicc: ["respiratory"] },
+  { name: "The Airway Assistant Course", studio: "The Airway Assistant Course", hours: 1, wicc: ["respiratory"] },
+  { name: "The Anatomy of Trauma", studio: "Trauma Resuscitation", hours: 1, wicc: ["none"] },
+  { name: "The Deposition", studio: "The Deposition", hours: 0.75, wicc: ["none"] },
+  { name: "The RSI Summit", studio: "The RSI Summit", hours: 1, wicc: ["pharmacology"] },
+  { name: "The Ventricular Blueprint", studio: "The Ventricular Blueprint", hours: 1, wicc: ["cardiovascular"] },
+  { name: "Thoracic Dissection Goals", studio: "Thoracic Dissection Goals", hours: 0.5, wicc: ["cardiovascular"] },
+  { name: "Thoracic Trauma", studio: "Thoracic Trauma", hours: 1, wicc: ["none"] },
+  { name: "Thyroid Emergencies Vodcast", studio: "Thyroid Emergencies", hours: 1, wicc: ["sepsis"] },
+  { name: "Tox and Immune", studio: "Toxicology & Immunology", hours: 2, wicc: ["pharmacology"] },
+  { name: "Toxic inhalation", studio: "Toxic Inhalation", hours: 1, wicc: ["respiratory"] },
+  { name: "Training For Humeral Head IO", studio: "Training For Humeral Head IO", hours: 0.5, wicc: ["vascular"] },
+  { name: "Training For Laryngoscopy", studio: "Endotracheal Intubation", hours: 0.5, wicc: ["none"] },
+  { name: "Training For Pediatric Intubation", studio: "Training For Pediatric Intubation", hours: 0.5, wicc: ["none"] },
+  { name: "Training For Pelvic Binder Placement", studio: "Training For Pelvic Binder Placement", hours: 0.5, wicc: ["none"] },
+  { name: "Training For Surgical Cricothyrotomy", studio: "Training For Surgical Cricothyrotomy", hours: 0.5, wicc: ["none"] },
+  { name: "Training To Perform A Finger Thoracostomy", studio: "Episode 3 - Finger Thoracostomy", hours: 0.5, wicc: ["none"] },
+  { name: "Training To Perform A Needle Decompression", studio: "Episode 2 - Needle Decompression", hours: 0.5, wicc: ["none"] },
+  { name: "Training To Perform A Pediatric Needle Cricothyrotomy", studio: "Episode 4 - Needle Cricothyrotomy", hours: 0.5, wicc: ["none"] },
+  { name: "Transcutaneous Pacing 101", studio: "False Capture", hours: 1, wicc: ["cardiovascular"] },
+  { name: "Trauma Anesthesia", studio: "Trauma Anesthesia", hours: 1, wicc: ["pharmacology"] },
+  { name: "Trauma Assessment (signs)", studio: "Trauma Assessment Part Two", hours: 1, wicc: ["none"] },
+  { name: "Trauma Assessment Part 1", studio: "Trauma Assessment Part One", hours: 1, wicc: ["none"] },
+  { name: "Trauma in Pregnancy", studio: "Trauma in Pregnancy", hours: 1, wicc: ["none"] },
+  { name: "Trauma Podcast Module", studio: "Trauma Podcasts", hours: 1, wicc: ["none"] },
+  { name: "Trauma Triage & Hand-off", studio: "Trauma Triage", hours: 1, wicc: ["none"] },
+  { name: "Traumatic Head Injuries and CT", studio: "Head CT", hours: 1, wicc: ["diagnostics"] },
+  { name: "Ultrasound & The FAST Exam", studio: "Ultrasound & The FAST Exam", hours: 0.5, wicc: ["diagnostics"] },
+  { name: "Understanding COPD", studio: "Understanding COPD", hours: 0.5, wicc: ["respiratory"] },
+  { name: "Understanding CPR", studio: "Understanding CPR", hours: 0.5, wicc: ["cpr"] },
+  { name: "Understanding Pressors", studio: "Pressor Puzzle", hours: 1, wicc: ["pharmacology"] },
+  { name: "Ventilator Language", studio: "Ventilator Language", hours: 1, wicc: ["respiratory"] },
+  { name: "Vital Signs", studio: "Vital Signs", hours: 0.5, wicc: ["diagnostics"] },
+  { name: "Vital Signs - Sexual Assault Awareness", studio: "Vital Signs - Sexual Assault Awareness", hours: 1, wicc: ["none"] },
+  { name: "Wolf-Parkinson-White & Adenosine Podcast", studio: "WPW", hours: 0.5, wicc: ["cardiovascular", "pharmacology"] }
+];
+let filterCat = "all";
+function shortName(key) {
+  return CATEGORIES[key].name.split(":")[0].split(",")[0];
+}
+function buildPills() {
+  const el = document.getElementById("pills");
+  const counts = {};
+  Object.keys(CATEGORIES).forEach(k => counts[k] = 0);
+  COURSES.forEach(c => c.wicc.forEach(w => counts[w]++));
+  let html = '<button class="pill" onclick="setFilter(\'all\')" id="pill-all" style="background:' + (filterCat==='all'?'#f8fafc':'#334155') + ';color:' + (filterCat==='all'?'#0f172a':'#94a3b8') + '">All (' + COURSES.length + ')</button>';
+  Object.entries(CATEGORIES).forEach(function([key, cat]) {
+    if (key === "none") return;
+    var active = filterCat === key;
+    html += '<button class="pill" onclick="setFilter(\'' + key + '\')" id="pill-' + key + '" style="background:' + (active?cat.color:'#334155') + ';color:' + (active?'#fff':'#94a3b8') + '">' + shortName(key) + ' (' + counts[key] + ')</button>';
+  });
+  var noneActive = filterCat === "none";
+  html += '<button class="pill" onclick="setFilter(\'none\')" id="pill-none" style="background:' + (noneActive?'#6b7280':'#334155') + ';color:' + (noneActive?'#fff':'#94a3b8') + '">No match (' + counts.none + ')</button>';
+  el.innerHTML = html;
+}
+function setFilter(cat) {
+  filterCat = (filterCat === cat) ? "all" : cat;
+  render();
+}
+function render() {
+  var q = document.getElementById("search").value.toLowerCase().trim();
+  var filtered = COURSES;
+  if (q) { var words = q.split(/\s+/); filtered = filtered.filter(function(c) { var hay = (c.name + " " + c.studio).toLowerCase(); return words.every(function(w) { return hay.includes(w); }); }); }
+  if (filterCat !== "all") filtered = filtered.filter(function(c) { return c.wicc.includes(filterCat); });
+  filtered.sort(function(a, b) { return a.name.localeCompare(b.name); });
+  buildPills();
+  document.getElementById("count").textContent = filtered.length + ' course' + (filtered.length !== 1 ? 's' : '') + ' found';
+  var el = document.getElementById("results");
+  if (filtered.length === 0) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">\ud83d\udd0d</div><div style="font-size:15px">No courses match your search</div><div style="font-size:13px;margin-top:4px">Try a different keyword</div></div>';
+    return;
+  }
+  el.innerHTML = filtered.map(function(c) {
+    var borderColor = CATEGORIES[c.wicc[0]].color;
+    var tags = c.wicc.map(function(w) {
+      var cat = CATEGORIES[w];
+      return '<span class="tag" style="background:' + cat.color + '22;color:' + cat.color + ';border:1px solid ' + cat.color + '44">' + shortName(w) + '</span>';
+    }).join("");
+    var hrs = c.hours === 1 ? "1 hr" : c.hours + " hrs";
+    return '<div class="card" style="border-left-color:' + borderColor + '"><div class="card-header"><div><div class="card-title">' + esc(c.name) + '</div><div class="card-studio">' + esc(c.studio) + '</div></div><span class="card-hours">' + hrs + '</span></div><div class="tags">' + tags + '</div></div>';
+  }).join("");
+}
+function esc(s) { var d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+render();
+
+/* === Tab switching === */
+function switchTab(tab) {
+  document.getElementById("tab-matcher").className = tab === "matcher" ? "tab active" : "tab";
+  document.getElementById("tab-tracker").className = tab === "tracker" ? "tab active" : "tab";
+  document.getElementById("view-matcher").className = tab === "matcher" ? "view active" : "view";
+  document.getElentById("view-tracker").className = tab === "tracker" ? "view active" : "view";
+}
