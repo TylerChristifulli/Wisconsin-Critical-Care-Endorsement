@@ -420,6 +420,10 @@ const REQUIREMENTS = {
 /* === CSV Parser === */
 function parseCSV(text) {
   var lines = text.split(/\r?\n/).filter(function(l) { return l.trim().length > 0; });
+  /* Skip header row if present */
+  if (lines.length > 0 && lines[0].toLowerCase().indexOf("course") !== -1 && lines[0].toLowerCase().indexOf("hours") !== -1) {
+    lines = lines.slice(1);
+  }
   return lines.map(function(line) {
     var parts = [];
     var current = "";
@@ -431,7 +435,8 @@ function parseCSV(text) {
       else { current += ch; }
     }
     parts.push(current.trim());
-    return { name: parts[0] || "", studio: parts[1] || "", hours: parseFloat(parts[2]) || 0 };
+    /* FOAMfrat Studio CSV: Course/Activity(0), Certificate(1), Completion Date(2), CE Hours(3), Accreditation(4), Category(5), Type(6), Course Code(7) */
+    return { name: parts[0] || "", date: parts[2] || "", hours: parseFloat(parts[3]) || 0, code: parts[7] || "" };
   });
 }
 
@@ -443,9 +448,9 @@ function matchCourses(imported) {
     var impName = imp.name.toLowerCase().trim();
     var found = COURSES.find(function(c) { return c.name.toLowerCase().trim() === impName; });
     if (found) {
-      matched.push({ name: found.name, hours: imp.hours, wicc: found.wicc });
+      matched.push({ name: found.name, hours: imp.hours, wicc: found.wicc, date: imp.date, code: imp.code });
     } else {
-      unmatched.push({ name: imp.name, hours: imp.hours });
+      unmatched.push({ name: imp.name, hours: imp.hours, date: imp.date, code: imp.code });
     }
   });
   return { matched: matched, unmatched: unmatched };
@@ -549,7 +554,7 @@ function renderTracker(result, fileName) {
       if (REQUIREMENTS[w]) {
         var share = m.hours / m.wicc.length;
         catHours[w] += share;
-        catCourses[w].push({ name: m.name, hours: share, totalHours: m.hours, cats: m.wicc });
+        catCourses[w].push({ name: m.name, hours: share, totalHours: m.hours, cats: m.wicc, date: m.date, code: m.code });
       }
     });
   });
@@ -589,7 +594,7 @@ function renderTracker(result, fileName) {
       var hasCPR = hrs > 0;
       var cprCourseList = catCourses[key].length > 0
         ? '<div class="req-detail" id="cat-detail-cpr"><div class="req-detail-inner">' +
-          catCourses[key].map(function(c) { return '<div class="req-course"><span>' + esc(c.name) + '</span><span class="req-course-hrs">' + c.hours.toFixed(1) + 'h</span></div>'; }).join("") +
+          catCourses[key].map(function(c) { return '<div class="req-course"><span>' + esc(c.name) + (c.date ? ' <span style="color:#94a3b8;font-size:11px">(' + esc(c.date) + ')</span>' : '') + '</span><span class="req-course-hrs">' + c.hours.toFixed(1) + 'h</span></div>'; }).join("") +
           '</div></div>'
         : '';
       gridHtml += '<div class="req-row" onclick="toggleCatDetail(\'cpr\')">' +
@@ -611,7 +616,7 @@ function renderTracker(result, fileName) {
       '<div class="req-detail" id="cat-detail-' + key + '"><div class="req-detail-inner">' +
       catCourses[key].map(function(c) {
         var shared = c.cats.length > 1 ? ' (split across ' + c.cats.length + ' categories)' : '';
-        return '<div class="req-course"><span>' + esc(c.name) + shared + '</span><span class="req-course-hrs">' + c.hours.toFixed(1) + 'h</span></div>';
+        return '<div class="req-course"><span>' + esc(c.name) + shared + (c.date ? ' <span style="color:#94a3b8;font-size:11px">(' + esc(c.date) + ')</span>' : '') + '</span><span class="req-course-hrs">' + c.hours.toFixed(1) + 'h</span></div>';
       }).join("") +
       '</div></div></div>';
   });
@@ -623,7 +628,7 @@ function renderTracker(result, fileName) {
   result.matched.sort(function(a, b) { return a.name.localeCompare(b.name); });
   result.matched.forEach(function(m) {
     var cats = m.wicc.map(function(w) { return CATEGORIES[w] ? shortName(w) : w; }).join(", ");
-    matchedHtml += '<div class="match-item"><div><span class="mi-name">' + esc(m.name) + '</span><br><span class="mi-cat">' + cats + '</span></div><span class="mi-hrs">' + m.hours + 'h</span></div>';
+    matchedHtml += '<div class="match-item"><div><span class="mi-name">' + esc(m.name) + '</span>' + (m.date ? ' <span style="color:#94a3b8;font-size:11px">(' + esc(m.date) + ')</span>' : '') + '<br><span class="mi-cat">' + cats + '</span></div><span class="mi-hrs">' + m.hours + 'h</span></div>';
   });
   matchedHtml += '</div>';
   document.getElementById("matched-section").innerHTML = matchedHtml;
@@ -661,7 +666,7 @@ function renderTracker(result, fileName) {
     var cats = m.wicc.filter(function(w) { return w !== "none"; }).map(function(w) { return REQUIREMENTS[w] ? REQUIREMENTS[w].label : w; }).join(", ");
     exportHtml += '<div class="export-item selected" id="ei-' + safeId + '" onclick="toggleExportCourse(\'' + esc(m.name).replace(/'/g, "\\'") + '\')">' +
       '<input type="checkbox" id="cb-' + safeId + '" checked onclick="event.stopPropagation();toggleExportCourse(\'' + esc(m.name).replace(/'/g, "\\'") + '\')">' +
-      '<div class="ei-info"><span class="ei-name">' + esc(m.name) + '</span><span class="ei-cats">' + cats + '</span></div>' +
+      '<div class="ei-info"><span class="ei-name">' + esc(m.name) + '</span><span class="ei-cats">' + cats + (m.date ? ' \u2014 ' + esc(m.date) : '') + (m.code ? ' \u2014 ' + esc(m.code) : '') + '</span></div>' +
       '<span class="ei-hrs">' + m.hours + 'h</span></div>';
   });
 
@@ -711,7 +716,7 @@ function exportPDF() {
       if (REQUIREMENTS[w]) {
         var share = m.hours / m.wicc.length;
         catHours[w] += share;
-        catCourseList[w].push({ name: m.name, hours: share });
+        catCourseList[w].push({ name: m.name, hours: share, date: m.date, code: m.code });
       }
     });
   });
@@ -776,18 +781,22 @@ function exportPDF() {
     doc.text(req.label + " (" + catHours[key].toFixed(1) + " / " + req.required + " hrs)", margin, y);
     y += 2;
 
-    var courseRows = courses.map(function(c) { return [c.name, c.hours.toFixed(1) + " hrs"]; });
+    var courseRows = courses.map(function(c) { return [c.name, c.date || "", c.code || "", c.hours.toFixed(1) + " hrs"]; });
 
     doc.autoTable({
       startY: y,
+      head: [["Course", "Date Completed", "Course Code", "Hours"]],
       body: courseRows,
       margin: { left: margin + 2, right: margin },
       styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [51, 65, 85], textColor: 255, fontStyle: "bold", fontSize: 7 },
       columnStyles: {
-        0: { cellWidth: 120 },
-        1: { halign: "right", fontStyle: "bold" }
+        0: { cellWidth: 75 },
+        1: { cellWidth: 28 },
+        2: { cellWidth: 38, fontSize: 7 },
+        3: { halign: "right", fontStyle: "bold" }
       },
-      theme: "plain",
+      theme: "grid",
       alternateRowStyles: { fillColor: [245, 245, 250] }
     });
     y = doc.lastAutoTable.finalY + 6;
