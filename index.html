@@ -314,7 +314,57 @@ const COURSES = [
   { name: "Surgical Cases From Start to Finish", studio: "Neonatal Surgical Emergencies", hours: 1, wicc: ["none"] },
   { name: "T1 Hacks", studio: "T1 Hacks", hours: 1, wicc: ["respiratory"] },
   { name: "The Advanced Airway Course", studio: "The Advanced Airway Course", hours: 1, wicc: ["respiratory"] },
-  { name: "The Airway Assistant Course", studio: "The Airway AssilterCat === "none";
+  { name: "The Airway Assistant Course", studio: "The Airway Assistant Course", hours: 1, wicc: ["respiratory"] },
+  { name: "The Anatomy of Trauma", studio: "Trauma Resuscitation", hours: 1, wicc: ["none"] },
+  { name: "The Deposition", studio: "The Deposition", hours: 0.75, wicc: ["none"] },
+  { name: "The RSI Summit", studio: "The RSI Summit", hours: 1, wicc: ["pharmacology"] },
+  { name: "The Ventricular Blueprint", studio: "The Ventricular Blueprint", hours: 1, wicc: ["cardiovascular"] },
+  { name: "Thoracic Dissection Goals", studio: "Thoracic Dissection Goals", hours: 0.5, wicc: ["cardiovascular"] },
+  { name: "Thoracic Trauma", studio: "Thoracic Trauma", hours: 1, wicc: ["none"] },
+  { name: "Thyroid Emergencies Vodcast", studio: "Thyroid Emergencies", hours: 1, wicc: ["sepsis"] },
+  { name: "Tox and Immune", studio: "Toxicology & Immunology", hours: 2, wicc: ["pharmacology"] },
+  { name: "Toxic inhalation", studio: "Toxic Inhalation", hours: 1, wicc: ["respiratory"] },
+  { name: "Training For Humeral Head IO", studio: "Training For Humeral Head IO", hours: 0.5, wicc: ["vascular"] },
+  { name: "Training For Laryngoscopy", studio: "Endotracheal Intubation", hours: 0.5, wicc: ["none"] },
+  { name: "Training For Pediatric Intubation", studio: "Training For Pediatric Intubation", hours: 0.5, wicc: ["none"] },
+  { name: "Training For Pelvic Binder Placement", studio: "Training For Pelvic Binder Placement", hours: 0.5, wicc: ["none"] },
+  { name: "Training For Surgical Cricothyrotomy", studio: "Training For Surgical Cricothyrotomy", hours: 0.5, wicc: ["none"] },
+  { name: "Training To Perform A Finger Thoracostomy", studio: "Episode 3 - Finger Thoracostomy", hours: 0.5, wicc: ["none"] },
+  { name: "Training To Perform A Needle Decompression", studio: "Episode 2 - Needle Decompression", hours: 0.5, wicc: ["none"] },
+  { name: "Training To Perform A Pediatric Needle Cricothyrotomy", studio: "Episode 4 - Needle Cricothyrotomy", hours: 0.5, wicc: ["none"] },
+  { name: "Transcutaneous Pacing 101", studio: "False Capture", hours: 1, wicc: ["cardiovascular"] },
+  { name: "Trauma Anesthesia", studio: "Trauma Anesthesia", hours: 1, wicc: ["pharmacology"] },
+  { name: "Trauma Assessment (signs)", studio: "Trauma Assessment Part Two", hours: 1, wicc: ["none"] },
+  { name: "Trauma Assessment Part 1", studio: "Trauma Assessment Part One", hours: 1, wicc: ["none"] },
+  { name: "Trauma in Pregnancy", studio: "Trauma in Pregnancy", hours: 1, wicc: ["none"] },
+  { name: "Trauma Podcast Module", studio: "Trauma Podcasts", hours: 1, wicc: ["none"] },
+  { name: "Trauma Triage & Hand-off", studio: "Trauma Triage", hours: 1, wicc: ["none"] },
+  { name: "Traumatic Head Injuries and CT", studio: "Head CT", hours: 1, wicc: ["diagnostics"] },
+  { name: "Ultrasound & The FAST Exam", studio: "Ultrasound & The FAST Exam", hours: 0.5, wicc: ["diagnostics"] },
+  { name: "Understanding COPD", studio: "Understanding COPD", hours: 0.5, wicc: ["respiratory"] },
+  { name: "Understanding CPR", studio: "Understanding CPR", hours: 0.5, wicc: ["cpr"] },
+  { name: "Understanding Pressors", studio: "Pressor Puzzle", hours: 1, wicc: ["pharmacology"] },
+  { name: "Ventilator Language", studio: "Ventilator Language", hours: 1, wicc: ["respiratory"] },
+  { name: "Vital Signs", studio: "Vital Signs", hours: 0.5, wicc: ["diagnostics"] },
+  { name: "Vital Signs - Sexual Assault Awareness", studio: "Vital Signs - Sexual Assault Awareness", hours: 1, wicc: ["none"] },
+  { name: "Wolf-Parkinson-White & Adenosine Podcast", studio: "WPW", hours: 0.5, wicc: ["cardiovascular", "pharmacology"] }
+];
+let filterCat = "all";
+function shortName(key) {
+  return CATEGORIES[key].name.split(":")[0].split(",")[0];
+}
+function buildPills() {
+  const el = document.getElementById("pills");
+  const counts = {};
+  Object.keys(CATEGORIES).forEach(k => counts[k] = 0);
+  COURSES.forEach(c => c.wicc.forEach(w => counts[w]++));
+  let html = '<button class="pill" onclick="setFilter(\'all\')" id="pill-all" style="background:' + (filterCat==='all'?'#f8fafc':'#334155') + ';color:' + (filterCat==='all'?'#0f172a':'#94a3b8') + '">All (' + COURSES.length + ')</button>';
+  Object.entries(CATEGORIES).forEach(function([key, cat]) {
+    if (key === "none") return;
+    var active = filterCat === key;
+    html += '<button class="pill" onclick="setFilter(\'' + key + '\')" id="pill-' + key + '" style="background:' + (active?cat.color:'#334155') + ';color:' + (active?'#fff':'#94a3b8') + '">' + shortName(key) + ' (' + counts[key] + ')</button>';
+  });
+  var noneActive = filterCat === "none";
   html += '<button class="pill" onclick="setFilter(\'none\')" id="pill-none" style="background:' + (noneActive?'#6b7280':'#334155') + ';color:' + (noneActive?'#fff':'#94a3b8') + '">No match (' + counts.none + ')</button>';
   el.innerHTML = html;
 }
@@ -471,97 +521,6 @@ function updateExportUI() {
     if (cb) cb.checked = !!selectedCourses[m.name];
     if (row) {
       row.className = selectedCourses[m.name] ? "export-item selected" : "export-item";
-    }
-  });
-}
-
-/* === Render the tracker dashboard === */
-function renderTracker(result, fileName) {
-  lastResult = result;
-  selectedCourses = {};
-
-  /* Update upload zone */
-  var zone = document.getElementById("upload-zone");
-  zone.className = "upload-zone has-file";
-  document.getElementById("upload-label").textContent = fileName;
-  document.getElementById("upload-hint").textContent = result.matched.length + " of " + (result.matched.length + result.unmatched.length) + " courses matched";
-
-  document.getElementById("tracker-results").style.display = "block";
-
-  /* Tally hours per category */
-  var catHours = {};
-  Object.keys(REQUIREMENTS).forEach(function(k) { catHours[k] = 0; });
-  var catCourses = {};
-  Object.keys(REQUIREMENTS).forEach(function(k) { catCourses[k] = []; });
-
-  result.matched.forEach(function(m) {
-    m.wicc.forEach(function(w) {
-      if (REQUIREMENTS[w]) {
-        var share = m.hours / m.wicc.length;
-        catHours[w] += share;
-        catCourses[w].push({ name: m.name, hours: share, totalHours: m.hours, cats: m.wicc });
-      }
-    });
-  });
-
-  /* Total WICC hours (excluding "none" and CPR) */
-  var totalWicc = 0;
-  Object.keys(REQUIREMENTS).forEach(function(k) {
-    if (k !== "cpr") totalWicc += catHours[k];
-  });
-
-  /* Summary */
-  document.getElementById("t-total").textContent = totalWicc.toFixed(1) + " / 24";
-  var statusEl = document.getElementById("t-status");
-  var allMet = true;
-  Object.keys(REQUIREMENTS).forEach(function(k) {
-    if (k === "cpr") return;
-    if (catHours[k] < REQUIREMENTS[k].required) allMet = false;
-  });
-
-  if (allMet && totalWicc >= 24) {
-    statusEl.textContent = "All requirements met!";
-    statusEl.style.background = "rgba(16,185,129,0.13)";
-    statusEl.style.color = "#10b981";
-  } else {
-    var deficit = Math.max(0, 24 - totalWicc);
-    statusEl.textContent = deficit > 0 ? (deficit.toFixed(1) + " more hours needed") : "Check individual categories below";
-    statusEl.style.background = "rgba(245,158,11,0.13)";
-    statusEl.style.color = "#f59e0b";
-  }
-
-  /* Category progress bars with expandable course lists */
-  var gridHtml = "";
-  Object.entries(REQUIREMENTS).forEach(function([key, req]) {
-    var cat = CATEGORIES[key];
-    var hrs = catHours[key];
-    if (key === "cpr") {
-      var hasCPR = hrs > 0;
-      var cprCourseList = catCourses[key].length > 0
-        ? '<div class="req-detail" id="cat-detail-cpr"><div class="req-detail-inner">' +
-          catCourses[key].map(function(c) { return '<div class="req-course"><span>' + esc(c.name) + '</span><span class="req-course-hrs">' + c.hours.toFixed(1) + 'h</span></div>'; }).join("") +
-          '</div></div>'
-        : '';
-      gridHtml += '<div class="req-row" onclick="toggleCatDetail(\'cpr\')">' +
-        '<div class="req-top"><span class="req-name" style="color:' + cat.color + '"><span id="cat-arrow-cpr" style="display:inline-block;width:16px;font-size:12px">' + (catCourses[key].length > 0 ? '\u25B8' : '') + '</span>CPR</span>' +
-        '<span class="req-hrs" style="color:' + (hasCPR ? '#10b981' : '#f59e0b') + '">' + (hasCPR ? "Current" : "Not found") + '</span></div>' +
-        '<div class="req-hint">' + req.note + '</div>' +
-        cprCourseList + '</div>';
-      return;
-    }
-    var pct = req.required > 0 ? Math.min(100, (hrs / req.required) * 100) : 100;
-    var met = hrs >= req.required;
-    var barColor = met ? "#10b981" : cat.color;
-    var courseCount = catCourses[key].length;
-    gridHtml += '<div class="req-row" onclick="toggleCatDetail(\'' + key + '\')">' +
-      '<div class="req-top"><span class="req-name" style="color:' + cat.color + '"><span id="cat-arrow-' + key + '" style="display:inline-block;width:16px;font-size:12px">\u25B8</span>' + esc(req.label) + '</span>' +
-      '<span class="req-hrs" style="color:' + (met ? '#10b981' : '#f59e0b') + '">' + hrs.toFixed(1) + ' / ' + req.required + ' hrs' + (met ? ' \u2713' : '') + '</span></div>' +
-      '<div class="req-bar-bg"><div class="req-bar" style="width:' + pct + '%;background:' + barColor + '"></div></div>' +
-      '<div class="req-hint">' + courseCount + ' course' + (courseCount !== 1 ? 's' : '') + ' \u2014 click to expand</div>' +
-      '<div class="req-detail" id="cat-detail-' + key + '"><div class="req-detail-inner">' +
-      catCourses[key].map(function(c) {
-        var shared = c.cats.length > 1 ? ' (split across ' + c.cats.length + ' categories)' : '';
-        return '<div class="req-coursport-item selected" : "export-item";
     }
   });
 }
