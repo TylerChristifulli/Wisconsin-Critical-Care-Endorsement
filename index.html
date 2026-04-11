@@ -417,13 +417,18 @@ const REQUIREMENTS = {
   sepsis:         { required: 6, label: "Sepsis / MODS" }
 };
 
-/* === CSV Parser === */
+/* === CSV Parser — auto-detects format === */
 function parseCSV(text) {
   var lines = text.split(/\r?\n/).filter(function(l) { return l.trim().length > 0; });
-  /* Skip header row if present */
-  if (lines.length > 0 && lines[0].toLowerCase().indexOf("course") !== -1 && lines[0].toLowerCase().indexOf("hours") !== -1) {
-    lines = lines.slice(1);
-  }
+
+  /* Detect format by checking first line */
+  var hasHeader = lines.length > 0 && lines[0].toLowerCase().indexOf("course") !== -1 && lines[0].toLowerCase().indexOf("hours") !== -1;
+  if (hasHeader) lines = lines.slice(1);
+
+  /* Count columns in first data row to detect format */
+  var sampleParts = (lines[0] || "").split(",");
+  var isCatalog = sampleParts.length <= 4 && !hasHeader;
+
   return lines.map(function(line) {
     var parts = [];
     var current = "";
@@ -431,12 +436,19 @@ function parseCSV(text) {
     for (var i = 0; i < line.length; i++) {
       var ch = line[i];
       if (ch === '"') { inQuotes = !inQuotes; }
-      else if (ch === ',' && !inQuotes) { parts.push(current.trim()); current = ""; }
+      else if (ch === ',' && !inQuotes) { parts.push(current.trim()); current = ''; }
       else { current += ch; }
     }
     parts.push(current.trim());
-    /* FOAMfrat Studio CSV: Course/Activity(0), Certificate(1), Completion Date(2), CE Hours(3), Accreditation(4), Category(5), Type(6), Course Code(7) */
-    return { name: parts[0] || "", date: parts[2] || "", hours: parseFloat(parts[3]) || 0, code: parts[7] || "" };
+
+    if (isCatalog) {
+      /* Catalog CSV: Name(0), Description(1), Hours(2) */
+      var catHours = parseFloat(parts[parts.length - 1]) || 0;
+      return { name: parts[0] || "", date: "", hours: catHours, code: "" };
+    } else {
+      /* Certificates CSV: Course/Activity(0), Certificate(1), Completion Date(2), CE Hours(3), Accreditation(4), Category(5), Type(6), Course Code(7) */
+      return { name: parts[0] || "", date: parts[2] || "", hours: parseFloat(parts[3]) || 0, code: parts[7] || "" };
+    }
   });
 }
 
