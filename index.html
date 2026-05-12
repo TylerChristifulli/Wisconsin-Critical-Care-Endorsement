@@ -63,7 +63,8 @@
   .match-header { font-size: 14px; font-weight: 600; color: #94a3b8; margin-bottom: 8px; cursor: pointer; user-select: none; }
   .match-header:hover { color: #f8fafc; }
   .match-list { display: flex; flex-direction: column; gap: 4px; }
-  .match-item { font-size: 13px; padding: 8px 12px; background: #1e293b; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+  .match-item { font-size: 13px; padding: 8px 12px; background: #1e293b; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .match-item .mi-info { flex: 1 1 200px; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .match-item .mi-name { color: #e2e8f0; }
   .match-item .mi-hrs { color: #38bdf8; font-weight: 600; font-size: 12px; }
   .match-item .mi-cat { font-size: 11px; color: #94a3b8; }
@@ -514,14 +515,22 @@ var rawResult = null;          /* output of matchCourses, before manual allocati
 var lastResult = null;         /* effective result with manual allocations applied */
 var lastFileName = "";
 var selectedCourses = {};
-var manualAllocations = {};    /* courseName -> categoryKey */
+var manualAllocations = {};    /* courseName -> categoryKey  (unmatched -> WICC category) */
+var matchedOverrides = {};     /* courseName -> categoryKey  (DB-matched override) */
 try {
   var savedAlloc = localStorage.getItem("wicc-manual-allocations");
   if (savedAlloc) manualAllocations = JSON.parse(savedAlloc) || {};
 } catch (e) { manualAllocations = {}; }
+try {
+  var savedOverrides = localStorage.getItem("wicc-matched-overrides");
+  if (savedOverrides) matchedOverrides = JSON.parse(savedOverrides) || {};
+} catch (e) { matchedOverrides = {}; }
 
 function persistAllocations() {
   try { localStorage.setItem("wicc-manual-allocations", JSON.stringify(manualAllocations)); } catch (e) {}
+}
+function persistOverrides() {
+  try { localStorage.setItem("wicc-matched-overrides", JSON.stringify(matchedOverrides)); } catch (e) {}
 }
 
 /* Assign (or clear, when categoryKey is empty) an unmatched course to a WICC category */
@@ -532,6 +541,17 @@ function assignUnmatched(courseName, categoryKey) {
     manualAllocations[courseName] = categoryKey;
   }
   persistAllocations();
+  if (rawResult) renderTracker(rawResult, lastFileName, false);
+}
+
+/* Override (or clear, when categoryKey is empty) the category of a DB-matched course */
+function assignMatched(courseName, categoryKey) {
+  if (!categoryKey) {
+    delete matchedOverrides[courseName];
+  } else if (REQUIREMENTS[categoryKey]) {
+    matchedOverrides[courseName] = categoryKey;
+  }
+  persistOverrides();
   if (rawResult) renderTracker(rawResult, lastFileName, false);
 }
 
@@ -599,7 +619,17 @@ function renderTracker(raw, fileName, isNewUpload) {
       });
     }
   });
-  var effectiveMatched = raw.matched.concat(allocatedFromUnmatched);
+
+  /* Apply category overrides to DB-matched courses */
+  var matchedWithOverrides = raw.matched.map(function(m) {
+    var ov = matchedOverrides[m.name];
+    if (ov && REQUIREMENTS[ov]) {
+      return { name: m.name, hours: m.hours, wicc: [ov], date: m.date, code: m.code, override: true };
+    }
+    return m;
+  });
+
+  var effectiveMatched = matchedWithOverrides.concat(allocatedFromUnmatched);
   lastResult = { matched: effectiveMatched, unmatched: raw.unmatched };
 
   if (isNewUpload) selectedCourses = {};
@@ -627,7 +657,7 @@ function renderTracker(raw, fileName, isNewUpload) {
       if (REQUIREMENTS[w]) {
         var share = m.hours / m.wicc.length;
         catHours[w] += share;
-        catCourses[w].push({ name: m.name, hours: share, totalHours: m.hours, cats: m.wicc, date: m.date, code: m.code, manual: m.manual });
+        catCourses[w].push({ name: m.name, hours: share, totalHours: m.hours, cats: m.wicc, date: m.date, code: m.code, manual: m.manual, override: m.override });
       }
     });
   });
@@ -672,21 +702,50 @@ function renderTracker(raw, fileName, isNewUpload) {
       '<div class="req-detail" id="cat-detail-' + key + '"><div class="req-detail-inner">' +
       catCourses[key].map(function(c) {
         var shared = c.cats.length > 1 ? ' (split across ' + c.cats.length + ' categories)' : '';
-        var badge = c.manual ? '<span class="manual-badge">manual</span>' : '';
+        var badge = c.manual ? '<span class="manual-badge">manual</span>' : (c.override ? '<span class="manual-badge">override</span>' : '');
         return '<div class="req-course"><span>' + esc(c.name) + shared + badge + (c.date ? ' <span style="color:#94a3b8;font-size:11px">(' + esc(c.date) + ')</span>' : '') + '</span><span class="req-course-hrs">' + c.hours.toFixed(1) + 'h</span></div>';
       }).join("") +
       '</div></div></div>';
   });
   document.getElementById("req-grid").innerHTML = gridHtml;
 
-  /* Matched courses list (collapsible) */
+  /* Matched courses list (collapsible) \u2014 each DB-matched row has a category override dropdown */
   var matchedHtml = '<div class="match-header" onclick="var el=this.nextElementSibling;el.style.display=el.style.display===\'none\'?\'flex\':\'none\';this.firstChild.textContent=el.style.display===\'none\'?\'\u25B8\':\'\u25BE\'">' +
-    '<span>\u25B8</span> Matched Courses (' + effectiveMatched.length + ')</div><div class="match-list" style="display:none">';
+    '<span>\u25B8</span> Matched Courses (' + effectiveMatched.length + ') \u2014 pick a category to override</div><div class="match-list" style="display:none">';
+
+  /* Look up each course's original DB categories for the "default" option label */
+  var dbWiccByName = {};
+  raw.matched.forEach(function(m) { dbWiccByName[m.name] = m.wicc; });
+
+  var matchedBaseOptions = '';
+  Object.entries(REQUIREMENTS).forEach(function([k, r]) {
+    matchedBaseOptions += '<option value="' + k + '">' + esc(r.label) + '</option>';
+  });
+
   effectiveMatched.sort(function(a, b) { return a.name.localeCompare(b.name); });
   effectiveMatched.forEach(function(m) {
     var cats = m.wicc.map(function(w) { return CATEGORIES[w] ? shortName(w) : w; }).join(", ");
-    var badge = m.manual ? '<span class="manual-badge">manual</span>' : '';
-    matchedHtml += '<div class="match-item"><div><span class="mi-name">' + esc(m.name) + '</span>' + badge + (m.date ? ' <span style="color:#94a3b8;font-size:11px">(' + esc(m.date) + ')</span>' : '') + '<br><span class="mi-cat">' + cats + '</span></div><span class="mi-hrs">' + m.hours + 'h</span></div>';
+    var badge = m.manual ? '<span class="manual-badge">manual</span>' : (m.override ? '<span class="manual-badge">override</span>' : '');
+    var control;
+    var dbWicc = dbWiccByName[m.name];
+    if (!m.manual && dbWicc) {
+      var defaultLabel = 'Default (' + dbWicc.map(function(w) { return CATEGORIES[w] ? shortName(w) : w; }).join(", ") + ')';
+      var override = matchedOverrides[m.name];
+      var optsHtml = '<option value="">' + esc(defaultLabel) + '</option>' + matchedBaseOptions;
+      if (override) optsHtml = optsHtml.replace('value="' + override + '"', 'value="' + override + '" selected');
+      var jsName = esc(m.name).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+      control = '<select class="allocator-select" onchange="assignMatched(\'' + jsName + '\', this.value)">' + optsHtml + '</select>';
+    } else {
+      control = '<span class="mi-cat">' + cats + '</span>';
+    }
+    matchedHtml += '<div class="match-item">' +
+      '<div class="mi-info">' +
+        '<span class="mi-name">' + esc(m.name) + '</span>' + badge +
+        (m.date ? ' <span style="color:#94a3b8;font-size:11px">(' + esc(m.date) + ')</span>' : '') +
+      '</div>' +
+      control +
+      '<span class="mi-hrs">' + m.hours + 'h</span>' +
+      '</div>';
   });
   matchedHtml += '</div>';
   document.getElementById("matched-section").innerHTML = matchedHtml;
