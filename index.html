@@ -148,7 +148,6 @@
 var jsPDF = window.jspdf ? window.jspdf.jsPDF : null;
 
 const CATEGORIES = {
-  cpr:            { name: "CPR",                                              color: "#ef4444" },
   diagnostics:    { name: "Diagnostic Studies: Lab Interpretation, Radiology", color: "#f59e0b" },
   vascular:       { name: "Vascular Access, Fluid and Blood Administration",  color: "#10b981" },
   pharmacology:   { name: "Pharmacology",                                     color: "#6366f1" },
@@ -186,7 +185,7 @@ const COURSES = [
   { name: "Bougie Techniques Podcast", studio: "Bougie Technique", hours: 0.5, wicc: ["none"] },
   { name: "Burns", studio: "Burns", hours: 1, wicc: ["none"] },
   { name: "Capnography", studio: "Capnography", hours: 1, wicc: ["diagnostics", "respiratory"] },
-  { name: "Cardiac Arrest", studio: "Cardiac Arrest", hours: 2, wicc: ["cpr", "cardiovascular"] },
+  { name: "Cardiac Arrest", studio: "Cardiac Arrest", hours: 2, wicc: ["cardiovascular"] },
   { name: "Cardiac Arrest Ultrasound", studio: "Cardiac Arrest Ultrasound", hours: 1, wicc: ["cardiovascular", "diagnostics"] },
   { name: "Cardiac Infections", studio: "Cardiac Infection Cases", hours: 1, wicc: ["cardiovascular", "sepsis"] },
   { name: "Cardiac Monitoring Patterns You Should Know", studio: "Cardiac Monitoring Patterns You Should Know", hours: 0.5, wicc: ["diagnostics", "cardiovascular"] },
@@ -274,7 +273,7 @@ const COURSES = [
   { name: "Oxygenation", studio: "Oxygenation", hours: 1, wicc: ["respiratory"] },
   { name: "Pain Management", studio: "Pain Management", hours: 1, wicc: ["pharmacology"] },
   { name: "Paramedics Guide To LV Function", studio: "The EMS Guide to Inotropy", hours: 0.5, wicc: ["cardiovascular"] },
-  { name: "Pediatric Cardiac Arrest", studio: "Pediatric Cardiac Arrest", hours: 1, wicc: ["cpr", "cardiovascular"] },
+  { name: "Pediatric Cardiac Arrest", studio: "Pediatric Cardiac Arrest", hours: 1, wicc: ["cardiovascular"] },
   { name: "Pediatric ECG", studio: "Pediatric ECG", hours: 1, wicc: ["diagnostics", "cardiovascular"] },
   { name: "Pediatric Functional Residual Capacity", studio: "Pediatric Pre-Oxygenation", hours: 1, wicc: ["respiratory"] },
   { name: "Pediatric Mechanical Ventilation", studio: "Pediatric Mechanical Ventilation", hours: 1, wicc: ["respiratory"] },
@@ -350,7 +349,7 @@ const COURSES = [
   { name: "Traumatic Head Injuries and CT", studio: "Head CT", hours: 1, wicc: ["diagnostics"] },
   { name: "Ultrasound & The FAST Exam", studio: "Ultrasound & The FAST Exam", hours: 0.5, wicc: ["diagnostics"] },
   { name: "Understanding COPD", studio: "Understanding COPD", hours: 0.5, wicc: ["respiratory"] },
-  { name: "Understanding CPR", studio: "Understanding CPR", hours: 0.5, wicc: ["cpr"] },
+  { name: "Understanding CPR", studio: "Understanding CPR", hours: 0.5, wicc: ["none"] },
   { name: "Understanding Pressors", studio: "Pressor Puzzle", hours: 1, wicc: ["pharmacology"] },
   { name: "Ventilator Language", studio: "Ventilator Language", hours: 1, wicc: ["respiratory"] },
   { name: "Vital Signs", studio: "Vital Signs", hours: 0.5, wicc: ["diagnostics"] },
@@ -416,7 +415,6 @@ function switchTab(tab) {
 
 /* === WICC Requirements (from F-01955 2026-2029) === */
 const REQUIREMENTS = {
-  cpr:            { required: 0, label: "CPR", note: "Current CPR required" },
   diagnostics:    { required: 3, label: "Diagnostic Studies" },
   vascular:       { required: 3, label: "Vascular Access" },
   pharmacology:   { required: 6, label: "Pharmacology" },
@@ -634,18 +632,15 @@ function renderTracker(raw, fileName, isNewUpload) {
     });
   });
 
-  /* Total WICC hours (excluding "none" and CPR) */
+  /* Total WICC hours (excluding "none") */
   var totalWicc = 0;
-  Object.keys(REQUIREMENTS).forEach(function(k) {
-    if (k !== "cpr") totalWicc += catHours[k];
-  });
+  Object.keys(REQUIREMENTS).forEach(function(k) { totalWicc += catHours[k]; });
 
   /* Summary */
   document.getElementById("t-total").textContent = totalWicc.toFixed(1) + " / 24";
   var statusEl = document.getElementById("t-status");
   var allMet = true;
   Object.keys(REQUIREMENTS).forEach(function(k) {
-    if (k === "cpr") return;
     if (catHours[k] < REQUIREMENTS[k].required) allMet = false;
   });
 
@@ -665,20 +660,6 @@ function renderTracker(raw, fileName, isNewUpload) {
   Object.entries(REQUIREMENTS).forEach(function([key, req]) {
     var cat = CATEGORIES[key];
     var hrs = catHours[key];
-    if (key === "cpr") {
-      var hasCPR = hrs > 0;
-      var cprCourseList = catCourses[key].length > 0
-        ? '<div class="req-detail" id="cat-detail-cpr"><div class="req-detail-inner">' +
-          catCourses[key].map(function(c) { return '<div class="req-course"><span>' + esc(c.name) + (c.date ? ' <span style="color:#94a3b8;font-size:11px">(' + esc(c.date) + ')</span>' : '') + '</span><span class="req-course-hrs">' + c.hours.toFixed(1) + 'h</span></div>'; }).join("") +
-          '</div></div>'
-        : '';
-      gridHtml += '<div class="req-row" onclick="toggleCatDetail(\'cpr\')">' +
-        '<div class="req-top"><span class="req-name" style="color:' + cat.color + '"><span id="cat-arrow-cpr" style="display:inline-block;width:16px;font-size:12px">' + (catCourses[key].length > 0 ? '\u25B8' : '') + '</span>CPR</span>' +
-        '<span class="req-hrs" style="color:' + (hasCPR ? '#10b981' : '#f59e0b') + '">' + (hasCPR ? "Current" : "Not found") + '</span></div>' +
-        '<div class="req-hint">' + req.note + '</div>' +
-        cprCourseList + '</div>';
-      return;
-    }
     var pct = req.required > 0 ? Math.min(100, (hrs / req.required) * 100) : 100;
     var met = hrs >= req.required;
     var barColor = met ? "#10b981" : cat.color;
@@ -831,11 +812,6 @@ function exportPDF() {
   /* Category requirement table */
   var catTableData = [];
   Object.entries(REQUIREMENTS).forEach(function([key, req]) {
-    if (key === "cpr") {
-      var hasCPR = catHours[key] > 0;
-      catTableData.push([req.label, "Current card required", hasCPR ? "Yes" : "No", hasCPR ? "Met" : "Needed"]);
-      return;
-    }
     var hrs = catHours[key];
     var met = hrs >= req.required;
     catTableData.push([req.label, req.required + " hrs", hrs.toFixed(1) + " hrs", met ? "Met" : "Short " + (req.required - hrs).toFixed(1) + "h"]);
@@ -867,7 +843,6 @@ function exportPDF() {
 
   /* Per-category course breakdowns */
   Object.entries(REQUIREMENTS).forEach(function([key, req]) {
-    if (key === "cpr") return;
     var courses = catCourseList[key];
     if (courses.length === 0) return;
 
