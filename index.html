@@ -68,6 +68,14 @@
   .match-item .mi-hrs { color: #38bdf8; font-weight: 600; font-size: 12px; }
   .match-item .mi-cat { font-size: 11px; color: #94a3b8; }
   .unmatched-item { color: #f59e0b; }
+  .unmatched-row { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #1e293b; border-radius: 8px; flex-wrap: wrap; }
+  .unmatched-row .um-name { color: #f59e0b; flex: 1 1 200px; font-size: 13px; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .unmatched-row .um-hrs { color: #38bdf8; font-weight: 600; font-size: 12px; white-space: nowrap; }
+  .unmatched-row.allocated { background: rgba(99,102,241,0.12); }
+  .unmatched-row.allocated .um-name { color: #c7d2fe; }
+  .allocator-select { background: #0f172a; color: #e2e8f0; border: 1px solid #334155; border-radius: 6px; padding: 4px 8px; font-size: 12px; cursor: pointer; outline: none; }
+  .allocator-select:hover, .allocator-select:focus { border-color: #6366f1; }
+  .manual-badge { display: inline-block; margin-left: 6px; font-size: 10px; padding: 1px 6px; border-radius: 8px; background: #4338ca; color: #e0e7ff; font-weight: 600; vertical-align: middle; }
   /* Export section */
   .export-section { margin-top: 24px; background: #1e293b; border-radius: 12px; padding: 20px; }
   .export-title { font-size: 16px; font-weight: 700; color: #f8fafc; margin-bottom: 4px; }
@@ -497,15 +505,37 @@ function handleCSV(input) {
   var reader = new FileReader();
   reader.onload = function(e) {
     var imported = parseCSV(e.target.result);
-    var result = matchCourses(imported);
-    renderTracker(result, file.name);
+    rawResult = matchCourses(imported);
+    renderTracker(rawResult, file.name, true);
   };
   reader.readAsText(file);
 }
 
 /* === Global state for export selection === */
-var lastResult = null;
+var rawResult = null;          /* output of matchCourses, before manual allocations */
+var lastResult = null;         /* effective result with manual allocations applied */
+var lastFileName = "";
 var selectedCourses = {};
+var manualAllocations = {};    /* courseName -> categoryKey */
+try {
+  var savedAlloc = localStorage.getItem("wicc-manual-allocations");
+  if (savedAlloc) manualAllocations = JSON.parse(savedAlloc) || {};
+} catch (e) { manualAllocations = {}; }
+
+function persistAllocations() {
+  try { localStorage.setItem("wicc-manual-allocations", JSON.stringify(manualAllocations)); } catch (e) {}
+}
+
+/* Assign (or clear, when categoryKey is empty) an unmatched course to a WICC category */
+function assignUnmatched(courseName, categoryKey) {
+  if (!categoryKey) {
+    delete manualAllocations[courseName];
+  } else if (REQUIREMENTS[categoryKey]) {
+    manualAllocations[courseName] = categoryKey;
+  }
+  persistAllocations();
+  if (rawResult) renderTracker(rawResult, lastFileName, false);
+}
 
 /* === Toggle category detail panel === */
 function toggleCatDetail(key) {
@@ -517,11 +547,7 @@ function toggleCatDetail(key) {
 
 /* === Toggle course selection for export === */
 function toggleExportCourse(name) {
-  if (selectedCourses[name]) {
-    delete selectedCourses[name];
-  } else {
-    selectedCourses[name] = true;
-  }
+  selectedCourses[name] = !selectedCourses[name];
   updateExportUI();
 }
 
@@ -529,22 +555,18 @@ function selectAllExport() {
   if (!lastResult) return;
   var wiccOnly = lastResult.matched.filter(function(m) { return !m.wicc.every(function(w) { return w === "none"; }); });
   var allSelected = wiccOnly.every(function(m) { return selectedCourses[m.name]; });
-  if (allSelected) {
-    wiccOnly.forEach(function(m) { delete selectedCourses[m.name]; });
-  } else {
-    wiccOnly.forEach(function(m) { selectedCourses[m.name] = true; });
-  }
+  wiccOnly.forEach(function(m) { selectedCourses[m.name] = !allSelected; });
   updateExportUI();
 }
 
 function updateExportUI() {
   if (!lastResult) return;
   var totalHrs = 0;
+  var numSelected = 0;
   lastResult.matched.forEach(function(m) {
-    if (selectedCourses[m.name]) totalHrs += m.hours;
+    if (selectedCourses[m.name]) { totalHrs += m.hours; numSelected++; }
   });
   var countEl = document.getElementById("export-count");
-  var numSelected = Object.keys(selectedCourses).length;
   if (countEl) {
     var cls = totalHrs >= 24 ? "hrs-good" : "hrs-warn";
     countEl.innerHTML = numSelected + " courses selected: <span class=\"" + cls + "\">" + totalHrs.toFixed(1) + " / 24 hrs</span>";
@@ -565,15 +587,34 @@ function updateExportUI() {
 }
 
 /* === Render the tracker dashboard === */
-function renderTracker(result, fileName) {
-  lastResult = result;
-  selectedCourses = {};
+function renderTracker(raw, fileName, isNewUpload) {
+  rawResult = raw;
+  lastFileName = fileName || "";
+
+  /* Apply manual allocations: turn unmatched courses with a chosen category into "matched" entries */
+  var allocatedFromUnmatched = [];
+  raw.unmatched.forEach(function(u) {
+    var cat = manualAllocations[u.name];
+    if (cat && REQUIREMENTS[cat]) {
+      allocatedFromUnmatched.push({
+        name: u.name, hours: u.hours, wicc: [cat], date: u.date, code: u.code, manual: true
+      });
+    }
+  });
+  var effectiveMatched = raw.matched.concat(allocatedFromUnmatched);
+  lastResult = { matched: effectiveMatched, unmatched: raw.unmatched };
+
+  if (isNewUpload) selectedCourses = {};
 
   /* Update upload zone */
   var zone = document.getElementById("upload-zone");
   zone.className = "upload-zone has-file";
   document.getElementById("upload-label").textContent = fileName;
-  document.getElementById("upload-hint").textContent = result.matched.length + " of " + (result.matched.length + result.unmatched.length) + " courses matched";
+  var totalIn = raw.matched.length + raw.unmatched.length;
+  var allocatedCount = allocatedFromUnmatched.length;
+  var hintParts = [raw.matched.length + " of " + totalIn + " courses matched"];
+  if (allocatedCount > 0) hintParts.push(allocatedCount + " manually allocated");
+  document.getElementById("upload-hint").textContent = hintParts.join(" • ");
 
   document.getElementById("tracker-results").style.display = "block";
 
@@ -583,12 +624,12 @@ function renderTracker(result, fileName) {
   var catCourses = {};
   Object.keys(REQUIREMENTS).forEach(function(k) { catCourses[k] = []; });
 
-  result.matched.forEach(function(m) {
+  effectiveMatched.forEach(function(m) {
     m.wicc.forEach(function(w) {
       if (REQUIREMENTS[w]) {
         var share = m.hours / m.wicc.length;
         catHours[w] += share;
-        catCourses[w].push({ name: m.name, hours: share, totalHours: m.hours, cats: m.wicc, date: m.date, code: m.code });
+        catCourses[w].push({ name: m.name, hours: share, totalHours: m.hours, cats: m.wicc, date: m.date, code: m.code, manual: m.manual });
       }
     });
   });
@@ -650,7 +691,8 @@ function renderTracker(result, fileName) {
       '<div class="req-detail" id="cat-detail-' + key + '"><div class="req-detail-inner">' +
       catCourses[key].map(function(c) {
         var shared = c.cats.length > 1 ? ' (split across ' + c.cats.length + ' categories)' : '';
-        return '<div class="req-course"><span>' + esc(c.name) + shared + (c.date ? ' <span style="color:#94a3b8;font-size:11px">(' + esc(c.date) + ')</span>' : '') + '</span><span class="req-course-hrs">' + c.hours.toFixed(1) + 'h</span></div>';
+        var badge = c.manual ? '<span class="manual-badge">manual</span>' : '';
+        return '<div class="req-course"><span>' + esc(c.name) + shared + badge + (c.date ? ' <span style="color:#94a3b8;font-size:11px">(' + esc(c.date) + ')</span>' : '') + '</span><span class="req-course-hrs">' + c.hours.toFixed(1) + 'h</span></div>';
       }).join("") +
       '</div></div></div>';
   });
@@ -658,21 +700,41 @@ function renderTracker(result, fileName) {
 
   /* Matched courses list (collapsible) */
   var matchedHtml = '<div class="match-header" onclick="var el=this.nextElementSibling;el.style.display=el.style.display===\'none\'?\'flex\':\'none\';this.firstChild.textContent=el.style.display===\'none\'?\'\u25B8\':\'\u25BE\'">' +
-    '<span>\u25B8</span> Matched Courses (' + result.matched.length + ')</div><div class="match-list" style="display:none">';
-  result.matched.sort(function(a, b) { return a.name.localeCompare(b.name); });
-  result.matched.forEach(function(m) {
+    '<span>\u25B8</span> Matched Courses (' + effectiveMatched.length + ')</div><div class="match-list" style="display:none">';
+  effectiveMatched.sort(function(a, b) { return a.name.localeCompare(b.name); });
+  effectiveMatched.forEach(function(m) {
     var cats = m.wicc.map(function(w) { return CATEGORIES[w] ? shortName(w) : w; }).join(", ");
-    matchedHtml += '<div class="match-item"><div><span class="mi-name">' + esc(m.name) + '</span>' + (m.date ? ' <span style="color:#94a3b8;font-size:11px">(' + esc(m.date) + ')</span>' : '') + '<br><span class="mi-cat">' + cats + '</span></div><span class="mi-hrs">' + m.hours + 'h</span></div>';
+    var badge = m.manual ? '<span class="manual-badge">manual</span>' : '';
+    matchedHtml += '<div class="match-item"><div><span class="mi-name">' + esc(m.name) + '</span>' + badge + (m.date ? ' <span style="color:#94a3b8;font-size:11px">(' + esc(m.date) + ')</span>' : '') + '<br><span class="mi-cat">' + cats + '</span></div><span class="mi-hrs">' + m.hours + 'h</span></div>';
   });
   matchedHtml += '</div>';
   document.getElementById("matched-section").innerHTML = matchedHtml;
 
-  /* Unmatched courses list */
-  if (result.unmatched.length > 0) {
+  /* Unmatched courses list \u2014 each row has a category picker to manually allocate */
+  if (raw.unmatched.length > 0) {
+    var allocOptions = '<option value="">Unassigned</option>';
+    Object.entries(REQUIREMENTS).forEach(function([k, r]) {
+      allocOptions += '<option value="' + k + '">' + esc(r.label) + '</option>';
+    });
+
+    var unallocatedCount = raw.unmatched.filter(function(u) { return !manualAllocations[u.name]; }).length;
+    var headerLabel = unallocatedCount > 0
+      ? 'Unmatched Courses (' + raw.unmatched.length + ') \u2014 assign a category to count them'
+      : 'Unmatched Courses (' + raw.unmatched.length + ') \u2014 all allocated';
+
     var unmHtml = '<div class="match-header" onclick="var el=this.nextElementSibling;el.style.display=el.style.display===\'none\'?\'flex\':\'none\';this.firstChild.textContent=el.style.display===\'none\'?\'\u25B8\':\'\u25BE\'">' +
-      '<span>\u25B8</span> Unmatched Courses (' + result.unmatched.length + ') \u2014 not counted toward WICC</div><div class="match-list" style="display:none">';
-    result.unmatched.forEach(function(u) {
-      unmHtml += '<div class="match-item unmatched-item"><span class="mi-name">' + esc(u.name) + '</span><span class="mi-hrs">' + u.hours + 'h</span></div>';
+      '<span>\u25BE</span> ' + esc(headerLabel) + '</div><div class="match-list" style="display:flex">';
+
+    raw.unmatched.forEach(function(u) {
+      var current = manualAllocations[u.name] || "";
+      var jsName = esc(u.name).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+      var rowClass = current ? "unmatched-row allocated" : "unmatched-row";
+      var optsHtml = allocOptions.replace('value="' + current + '"', 'value="' + current + '" selected');
+      unmHtml += '<div class="' + rowClass + '">' +
+        '<span class="um-name">' + esc(u.name) + '</span>' +
+        '<select class="allocator-select" onchange="assignUnmatched(\'' + jsName + '\', this.value)">' + optsHtml + '</select>' +
+        '<span class="um-hrs">' + u.hours + 'h</span>' +
+        '</div>';
     });
     unmHtml += '</div>';
     document.getElementById("unmatched-section").innerHTML = unmHtml;
@@ -681,8 +743,10 @@ function renderTracker(result, fileName) {
   }
 
   /* Export section - course picker */
-  var wiccMatched = result.matched.filter(function(m) { return !m.wicc.every(function(w) { return w === "none"; }); });
-  wiccMatched.forEach(function(m) { selectedCourses[m.name] = true; });
+  var wiccMatched = effectiveMatched.filter(function(m) { return !m.wicc.every(function(w) { return w === "none"; }); });
+  wiccMatched.forEach(function(m) {
+    if (isNewUpload || !(m.name in selectedCourses)) selectedCourses[m.name] = true;
+  });
 
   var exportHtml = '<div class="export-section">' +
     '<div class="export-title">Export PDF</div>' +
